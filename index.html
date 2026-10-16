@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Ranks games by when they're worth buying and whether they fit a busy schedule." />
+    <title>Patient Gamers Rank</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏳</text></svg>" />
+    <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f6f5f2;
+  --card: #fff;
+  --text: #1c1c1e;
+  --muted: #6b6b70;
+  --line: #e2e0db;
+  --accent: #3b6ea8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141416;
+    --card: #1e1e21;
+    --text: #ececef;
+    --muted: #9a9aa2;
+    --line: #2e2e33;
+    --accent: #7aa7dc;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0 auto;
+  max-width: 820px;
+  padding: 24px 16px 48px;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, sans-serif;
+}
+header h1 { margin: 0; font-size: 1.8rem; }
+header p, .meta, #count, footer { color: var(--muted); }
+
+#filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 20px 0 8px;
+}
+#filters label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+#filters output { float: right; color: var(--text); }
+input, select { font: inherit; accent-color: var(--accent); }
+input[type="search"], select {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+}
+
+#list { list-style: none; padding: 0; margin: 0; counter-reset: rank; }
+#list > li {
+  counter-increment: rank;
+  position: relative;
+  margin: 10px 0;
+  padding: 14px 16px 14px 56px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+#list > li::before {
+  content: counter(rank);
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+h2 { margin: 0; font-size: 1.1rem; }
+.meta { margin: 2px 0 8px; font-size: 0.85rem; }
+
+.score summary {
+  display: grid;
+  grid-template-columns: 110px 1fr 32px;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.score summary::-webkit-details-marker { display: none; }
+.score meter { width: 100%; height: 10px; }
+.score b { text-align: right; }
+.score ul { margin: 4px 0 8px 120px; padding: 0; list-style: none; font-size: 0.85rem; color: var(--muted); max-width: 260px; }
+.score li { display: flex; justify-content: space-between; }
+
+@media (max-width: 480px) {
+  #list > li { padding-left: 44px; }
+  #list > li::before { left: 12px; }
+  .score summary { grid-template-columns: 90px 1fr 28px; }
+  .score ul { margin-left: 0; }
+}
+    </style>
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Patient Gamers Rank</h1>
+      <p>Wait for the sale, skip the launch bugs, finish what you start.</p>
+    </header>
+
+    <form id="filters" onsubmit="return false">
+      <label>Search <input type="search" name="q" placeholder="Title" /></label>
+      <label>Platform <select name="platform"><option value="">All</option></select></label>
+      <label>Max price <output name="priceOut"></output><input type="range" name="price" min="0" max="70" step="5" value="70" /></label>
+      <label>Max hours <output name="hoursOut"></output><input type="range" name="hours" min="5" max="100" step="5" value="100" /></label>
+      <label>Sort by
+        <select name="sort">
+          <option value="both">Both scores</option>
+          <option value="patient">Patient Gamer</option>
+          <option value="dad">Gamer Dad</option>
+        </select>
+      </label>
+    </form>
+
+    <p id="count" aria-live="polite"></p>
+    <ol id="list"></ol>
+
+    <footer>
+      <details>
+        <summary>How the scores work</summary>
+        <p><b>Patient Gamer</b> (0–100): 35 for being 2+ years old, 30 for a sale price of $10 or less, 20 for quality (average of critic and user score), 5 if users rate it higher than critics did at launch, 10 for a complete edition, −15 for live service.</p>
+        <p><b>Gamer Dad</b> (0–100): 35 for a main story of 10 hours or less, 30 for quality, 20 if it works in short sessions, 15 for handheld (Switch / Steam Deck), −20 for live service.</p>
+        <p>The scores, prices and playtimes are rough figures entered by hand. Check current prices before you buy.</p>
+      </details>
+    </footer>
+  </body>
+</html>

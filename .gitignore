@@ -1,1 +1,4 @@
 /.claude/
+# Published as a release asset by the daily workflow; get it with
+# gh release download --pattern games.json
+/games.json

@@ -10,14 +10,15 @@
 //              up over several runs instead of hammering the APIs.
 // Prices       CheapShark, 25 games per request, every run: best current price
 //              across stores and the all-time low.
-// A lookup that fails keeps the game's previous value. Env: LIMIT, MAX_MINUTES. Progress is saved every
+// A lookup that fails keeps the game's previous value. Progress is saved every
 // 50 games, so the script can be stopped and restarted.
+// Env: LIMIT, MAX_MINUTES, REFRESH_DAYS (0 = refetch every game).
 import { readFileSync, writeFileSync } from "node:fs";
 
 const MIN_REVIEWS = 1000;
 const MIN_PCT = 75;
 const LIMIT = Number(process.env.LIMIT ?? 300);
-const REFRESH_DAYS = 90;
+const REFRESH_DAYS = Number(process.env.REFRESH_DAYS ?? 90);
 // Stop fetching details after this many minutes so prices and the final save
 // still fit in a GitHub Actions job (6 h max).
 const DEADLINE = Date.now() + Number(process.env.MAX_MINUTES ?? 1e6) * 60_000;

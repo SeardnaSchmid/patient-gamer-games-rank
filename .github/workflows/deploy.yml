@@ -1,6 +1,9 @@
-# Tests the scoring and publishes the repo root on GitHub Pages. No build step:
-# the site is plain HTML/JS/JSON served as-is. The daily run (and a manual one)
-# first refreshes games.json from Steam, CheapShark and HowLongToBeat and commits it.
+# Publishes the site on GitHub Pages. No build step: plain HTML/JS/JSON.
+#
+# games.json is not in the repo. The daily run fetches every game fresh, seeded
+# with the previous release so a failing source keeps yesterday's values, and
+# publishes the result as a release (data-YYYY-MM-DD) before deploying it.
+# Pushes and plain manual runs deploy the latest release's games.json.
 name: Deploy to GitHub Pages
 
 on:
@@ -8,20 +11,25 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      limit:
-        description: "Max games to fetch details for (300 ≈ 10 min, 7000 = everything ≈ 3.5 h)"
-        default: "300"
+      fetch:
+        description: "Fetch fresh data for every game (about 3.5 h) and release it"
+        type: boolean
+        default: false
   schedule:
     - cron: "0 5 * * *" # daily 05:00 UTC
 
 permissions:
-  contents: write
+  contents: write # create the data releases
   pages: write
   id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  FETCH: ${{ github.event_name == 'schedule' || inputs.fetch == true }}
 
 jobs:
   build:
@@ -34,26 +42,29 @@ jobs:
         with:
           node-version: 22
 
-      - name: Refresh game data
-        if: github.event_name != 'push'
+      - name: Download latest game data
+        run: gh release download --pattern games.json
+
+      - name: Fetch game data
+        if: env.FETCH == 'true'
         env:
-          LIMIT: ${{ inputs.limit || 300 }}
-          MAX_MINUTES: 300
+          LIMIT: 100000
+          REFRESH_DAYS: 0
+          MAX_MINUTES: 300 # stop early and save, leaving room for prices and the release
         run: node scripts/fetch.mjs
 
-      # Runs before the commit so broken data is never committed or deployed.
+      # Before the release, so broken data is never published or deployed.
       - run: node --test score.test.js
 
-      - name: Commit game data
-        if: github.event_name != 'push'
+      - name: Release game data
+        if: env.FETCH == 'true'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-          git add games.json
-          git diff --cached --quiet && exit 0
-          git commit -m "Refresh game data"
-          git pull --rebase
-          git push
+          day=$(date -u +%F)
+          n=$(node -p 'require("./games.json").games.length')
+          # A second run on the same day replaces that day's file.
+          gh release create "data-$day" games.json --title "Game data $day" \
+            --notes "$n games from Steam, SteamSpy, CheapShark and HowLongToBeat." \
+            || gh release upload "data-$day" games.json --clobber
 
       - uses: actions/upload-pages-artifact@v3
         with:

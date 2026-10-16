@@ -20,22 +20,29 @@ Every value a score uses is fetched, not typed in. `scripts/fetch.mjs` takes eve
 | Genre tags (top 4, minus mood tags like "Indie") | SteamSpy |
 | Main-story hours | HowLongToBeat (unofficial site API, may break) |
 
-Release date, Metascore, features, Deck rating, tags and playtime are fetched once per game (refreshed after 90 days), at most `LIMIT` (default 300) new games per run, so a fresh catalogue fills up over a few runs. Reviews and prices are refreshed on every run. If a source fails, the game keeps its previous value. The deploy workflow runs the fetch daily and on manual runs. To fetch everything at once, run it manually from the Actions tab with `limit` 7000 (about 3.5 hours; the script stops after 5 hours and saves what it has):
+A source that fails keeps the game's previous value. The scoring rules are in `score.js`.
+
+### Daily data releases
+
+`games.json` is not in the repo. Every day at 05:00 UTC the workflow downloads the latest data release, fetches every game fresh on top of it (about 3.5 hours; it stops after 5 hours and keeps the rest from the previous day), publishes the result as a release named `data-YYYY-MM-DD` and deploys the site with it. Pushes deploy the latest release's data without fetching.
+
+To fetch and release outside the daily schedule:
 
 ```sh
-gh workflow run deploy.yml -f limit=7000
-``` The scoring rules are in `score.js`.
+gh workflow run deploy.yml -f fetch=true
+```
 
 ## Local development
 
 ```sh
-python3 -m http.server 8000   # then open http://localhost:8000
+gh release download --pattern games.json --clobber   # latest data
+python3 -m http.server 8000                          # then open http://localhost:8000
 node --test score.test.js
-LIMIT=50 node scripts/fetch.mjs   # refresh games.json
+LIMIT=50 node scripts/fetch.mjs                      # fetch details for up to 50 games
 ```
 
 There is no build step and there are no dependencies.
 
 ## Publishing
 
-Every push to `main` runs `.github/workflows/deploy.yml`, which runs the tests and publishes the repo root on GitHub Pages. Set **Settings → Pages → Source** to **GitHub Actions** once.
+Every push to `main` runs `.github/workflows/deploy.yml`, which runs the tests and publishes the repo root (plus the latest `games.json`) on GitHub Pages. Set **Settings → Pages → Source** to **GitHub Actions** once.

@@ -64,13 +64,13 @@ const sortKey = {
   mp: (g) => g.mp.score,
 };
 
-function bar(label, s, none, cls = "") {
+function bar(label, s, none, cls = "", extra = "") {
   if (!s) return `<div class="score none ${cls}"><span>${label}</span><span>${none}</span></div>`;
   const { score, parts } = s;
   const rows = Object.entries(parts)
     .map(([k, [v, why]]) => `<li class="${v ? "" : "zero"}"><span>${k} <small>${esc(why)}</small></span><span>${v > 0 ? "+" : ""}${Math.round(v)}</span></li>`)
     .join("");
-  return `<details class="score ${cls}"><summary><span>${label}</span><span class="bar"><i class="${score >= 70 ? "hi" : score >= 40 ? "ok" : ""}" style="width:${score}%"></i></span><b>${score}</b></summary><ul>${rows}</ul></details>`;
+  return `<details class="score ${cls}"><summary><span>${label}</span><span class="bar"><i class="${score >= 70 ? "hi" : score >= 40 ? "ok" : ""}" style="width:${score}%"></i></span><b>${score}</b></summary><ul>${rows}</ul>${extra}</details>`;
 }
 
 // Step chart of the price since tracking began, extended to the data's date.
@@ -78,8 +78,11 @@ function bar(label, s, none, cls = "") {
 // all-time low from CheapShark. Each step has a native tooltip.
 function priceChart(g) {
   const pts = g.pts;
+  const fmtDay = (t) => new Date(t).toISOString().slice(0, 10);
+  if (pts.length < 2) {
+    return `<p class="price-note">${pts.length ? `Price tracked since ${fmtDay(pts[0][0])}; the chart starts once it changes.` : "No price history yet; it builds up with every daily update."}</p>`;
+  }
   const top = Math.max(...pts.map(([, p]) => p), g.lowest ?? 0);
-  if (pts.length < 2 || !top) return ""; // nothing to show for an always-free game
   const W = 300, H = 40, t0 = pts[0][0], t1 = Math.max(end, pts.at(-1)[0] + 864e5);
   const x = (t) => ((t - t0) / (t1 - t0)) * W, y = (p) => H - 2 - (p / top) * (H - 4);
   const fmt = (t) => new Date(t).toISOString().slice(0, 10);
@@ -160,8 +163,7 @@ function render() {
         ].filter(Boolean).join(" · ")}</p>
         ${kpis(g)}
         ${bar("Worth the wait", g.worth, "", "primary")}
-        ${bar("Buy now", g.deal, "free to play", "primary")}
-        ${priceChart(g)}
+        ${bar("Buy now", g.deal, "free to play", "primary", priceChart(g))}
         ${f.sort === "dad" ? bar("Gamer Dad", g.dad) : f.sort === "mp" ? bar("Multiplayer", g.mp) : ""}
       </div>
     </li>`).join("");

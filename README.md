@@ -24,7 +24,15 @@ A source that fails keeps the game's previous value. The scoring rules are in `s
 
 ### Daily data releases
 
-`games.json` is not in the repo. Every day at 05:00 UTC the workflow downloads the latest data release, fetches every game fresh on top of it (about 3.5 hours; it stops after 5 hours and keeps the rest from the previous day), publishes the result as a release named `data-YYYY-MM-DD` and deploys the site with it. Pushes deploy the latest release's data without fetching.
+`games.json` is not in the repo. Every day at 05:00 UTC the workflow downloads the latest data release, fetches every game fresh on top of it (about 3.5 hours; it stops after 5 hours and keeps the rest from the previous day), appends today's values to `history.json`, publishes both as a release named `data-YYYY-MM-DD` and deploys the site with them.
+
+`history.json` carries over from release to release, so every release holds the whole history. Per game it stores one row for every day on which the price, all-time low, Steam %, Metascore or Deck rating changed (with the review count of that day):
+
+```json
+{"fields":["day","price","lowest","steamPct","metascore","deck","steamReviews"],"games":{
+ "620":[["2026-10-16",9.99,0.99,99,95,"verified",412000]]
+}}
+``` Pushes deploy the latest release's data without fetching.
 
 To fetch and release outside the daily schedule:
 
@@ -35,9 +43,9 @@ gh workflow run deploy.yml -f fetch=true
 ## Local development
 
 ```sh
-gh release download --pattern games.json --clobber   # latest data
+gh release download --pattern '*.json' --clobber      # latest data and history
 python3 -m http.server 8000                          # then open http://localhost:8000
-node --test score.test.js
+node --test
 LIMIT=50 node scripts/fetch.mjs                      # fetch details for up to 50 games
 ```
 

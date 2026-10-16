@@ -8,6 +8,8 @@ const PAGE = 100;
 let limit = PAGE;
 
 const data = await (await fetch("games.json")).json();
+// Optional: the price history carried through the data releases.
+const priceHistory = await fetch("history.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
 document.getElementById("updated").textContent = data.updated;
 const games = data.games.map((g) => ({
   ...g,
@@ -33,6 +35,32 @@ function bar(label, { score, parts }) {
     .map(([k, [v, why]]) => `<li class="${v ? "" : "zero"}"><span>${k} <small>${esc(why)}</small></span><span>${v > 0 ? "+" : ""}${Math.round(v)}</span></li>`)
     .join("");
   return `<details class="score"><summary><span>${label}</span><span class="bar"><i class="${score >= 70 ? "hi" : score >= 40 ? "ok" : ""}" style="width:${score}%"></i></span><b>${score}</b></summary><ul>${rows}</ul></details>`;
+}
+
+// Step chart of the price since tracking began, extended to the data's date.
+// Baseline is $0 so a drop reads at its true size; the dashed line is the
+// all-time low from CheapShark. Each step has a native tooltip.
+function priceChart(g) {
+  const rows = priceHistory?.games[g.appid];
+  if (!rows || rows.length < 2) return "";
+  const day = priceHistory.fields.indexOf("day"), price = priceHistory.fields.indexOf("price");
+  const pts = rows.map((r) => [Date.parse(r[day]), r[price]]).filter(([, p]) => p != null);
+  const top = Math.max(...pts.map(([, p]) => p), g.lowest ?? 0);
+  if (pts.length < 2 || !top) return ""; // nothing to show for an always-free game
+  const W = 300, H = 40, t0 = pts[0][0], t1 = Math.max(Date.parse(data.updated), pts.at(-1)[0] + 864e5);
+  const x = (t) => ((t - t0) / (t1 - t0)) * W, y = (p) => H - 2 - (p / top) * (H - 4);
+  const fmt = (t) => new Date(t).toISOString().slice(0, 10);
+  let d = `M0 ${y(pts[0][1])}`, hits = "";
+  pts.forEach(([t, p], i) => {
+    const end = i + 1 < pts.length ? pts[i + 1][0] : t1;
+    d += `H${x(end)}` + (i + 1 < pts.length ? `V${y(pts[i + 1][1])}` : "");
+    hits += `<rect x="${x(t)}" width="${Math.max(x(end) - x(t), 1)}" height="${H}"><title>$${p} from ${fmt(t)}</title></rect>`;
+  });
+  const low = g.lowest != null ? `<line class="low" x1="0" x2="${W}" y1="${y(g.lowest)}" y2="${y(g.lowest)}" />` : "";
+  return `<figure class="price-chart">
+    <figcaption><span>Price since ${fmt(t0)}</span><span>high $${Math.max(...pts.map(([, p]) => p))} · <span class="lowkey">low $${g.lowest}</span></span></figcaption>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Price history: ${pts.map(([t, p]) => `$${p} from ${fmt(t)}`).join(", ")}">${low}<path d="${d}" />${hits}</svg>
+  </figure>`;
 }
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -69,6 +97,7 @@ function render() {
           <li class="${g.deck === "verified" ? "good" : ""}">Deck ${g.deck}</li>
           ${(g.tags ?? []).map((t) => `<li class="tag"><button type="button" data-tag="${esc(t)}">${esc(t)}</button></li>`).join("")}
         </ul>
+        ${priceChart(g)}
         ${bar("Patient Gamer", g.patient)}
         ${bar("Gamer Dad", g.dad)}
       </div>

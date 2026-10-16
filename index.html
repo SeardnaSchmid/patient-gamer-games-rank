@@ -181,6 +181,14 @@ h2 { margin: 0; font-size: 1.1rem; line-height: 1.3; }
 .score li { display: flex; justify-content: space-between; gap: 12px; }
 .score li.zero { opacity: 0.5; }
 .score small { opacity: 0.8; }
+.price-chart { margin: 0 0 10px; max-width: 440px; }
+.price-chart figcaption { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); }
+.price-chart .lowkey { color: var(--good); }
+.price-chart svg { display: block; width: 100%; height: 40px; overflow: visible; }
+.price-chart path { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.price-chart .low { stroke: var(--good); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.price-chart rect { fill: transparent; }
+.price-chart rect:hover { fill: color-mix(in srgb, var(--accent) 12%, transparent); }
 #more {
   display: block;
   margin: 16px auto;

@@ -102,6 +102,17 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
   appearance: none;
   cursor: pointer;
 }
+.reset {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.reset:hover { text-decoration: underline; }
 .group select.set { background-color: var(--accent); color: var(--bg); font-weight: 600; }
 .chips button {
   padding: 0 8px;
@@ -256,11 +267,16 @@ h2 a { color: inherit; }
     <form id="filters" onsubmit="return false">
       <input type="search" name="q" placeholder="Search games…" aria-label="Search games" />
       <div class="groups">
+        <button type="reset" class="reset">Reset filters</button>
         <div class="group" role="radiogroup" aria-label="Rank by"><span class="label">Rank by</span><label><input type="radio" name="sort" value="worth" checked /><span>Worth it</span></label><label><input type="radio" name="sort" value="deal" /><span>Buy now</span></label><label><input type="radio" name="sort" value="dad" /><span>Gamer Dad</span></label><label><input type="radio" name="sort" value="mp" /><span>Multiplayer</span></label></div>
+        <div class="group" role="radiogroup" aria-label="Play"><span class="label">Play</span><label><input type="radio" name="play" value="" checked /><span>Any</span></label><label><input type="radio" name="play" value="single" /><span>Single-player</span></label><label><input type="radio" name="play" value="coop" /><span>Online co-op</span></label><label><input type="radio" name="play" value="pvp" /><span>PvP</span></label></div>
         <div class="group" role="radiogroup" aria-label="Price"><span class="label">Price</span><label><input type="radio" name="price" value="" checked /><span>Any</span></label><label><input type="radio" name="price" value="0" /><span>Free</span></label><label><input type="radio" name="price" value="5" /><span>≤ $5</span></label><label><input type="radio" name="price" value="10" /><span>≤ $10</span></label><label><input type="radio" name="price" value="20" /><span>≤ $20</span></label></div>
+        <div class="group" role="radiogroup" aria-label="Deal"><span class="label">Deal</span><label><input type="radio" name="deal" value="" checked /><span>Any</span></label><label><input type="radio" name="deal" value="sale" /><span>On sale</span></label><label><input type="radio" name="deal" value="low" /><span>All-time low</span></label></div>
         <div class="group" role="radiogroup" aria-label="Length"><span class="label">Length</span><label><input type="radio" name="hours" value="" checked /><span>Any</span></label><label><input type="radio" name="hours" value="5" /><span>≤ 5h</span></label><label><input type="radio" name="hours" value="10" /><span>≤ 10h</span></label><label><input type="radio" name="hours" value="20" /><span>≤ 20h</span></label><label><input type="radio" name="hours" value="40" /><span>≤ 40h</span></label></div>
+        <div class="group" role="radiogroup" aria-label="Released"><span class="label">Released</span><label><input type="radio" name="year" value="" checked /><span>Any</span></label><label><input type="radio" name="year" value="-2014" /><span>≤ 2014</span></label><label><input type="radio" name="year" value="2015-2019" /><span>2015–19</span></label><label><input type="radio" name="year" value="2020-2023" /><span>2020–23</span></label><label><input type="radio" name="year" value="2024-" /><span>2024+</span></label></div>
         <label class="group"><span class="label">Genre</span><select name="genre"><option value="">Any</option></select></label>
         <div class="group" role="radiogroup" aria-label="Steam Deck"><span class="label">Steam Deck</span><label><input type="radio" name="deck" value="" checked /><span>Any</span></label><label><input type="radio" name="deck" value="playable" /><span>Playable</span></label><label><input type="radio" name="deck" value="verified" /><span>Verified</span></label></div>
+        <div class="group" role="radiogroup" aria-label="Show"><span class="label">Show</span><label><input type="radio" name="show" value="" checked /><span>All</span></label><label><input type="radio" name="show" value="finished" /><span>Finished only</span></label></div>
       </div>
     </form>
 

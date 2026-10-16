@@ -77,6 +77,13 @@ function priceChart(g) {
   </figure>`;
 }
 
+// "2015-2019", "-2014" or "2024-": inclusive year range, open on the empty side.
+function inYears(released, range) {
+  const [from, to] = range.split("-").map((y) => (y ? Number(y) : null));
+  const y = Number(released.slice(0, 4));
+  return (from == null || y >= from) && (to == null || y <= to);
+}
+
 function priceChip(g) {
   if (!g.price) return "Free";
   const off = g.regularPrice > g.price ? Math.round((1 - g.price / g.regularPrice) * 100) : 0;
@@ -96,6 +103,10 @@ function render() {
     .filter((g) => (f.sort !== "mp" || g.mp) // the multiplayer ranking lists online games only
       && (!q || g.title.toLowerCase().includes(q))
       && (!f.genre || g.tags?.includes(f.genre))
+      && (!f.play || (f.play === "single" ? g.singleplayer : f.play === "coop" ? g.onlineCoop : g.onlinePvp))
+      && (!f.deal || (f.deal === "sale" ? g.regularPrice > g.price * 1.05 : g.price > 0 && g.lowest != null && g.price <= g.lowest))
+      && (!f.year || inYears(g.released, f.year))
+      && (!f.show || !(g.earlyAccess || g.liveService))
       && (!f.deck || g.deck === "verified" || (f.deck === "playable" && g.deck === "playable"))
       && (f.price === "" || g.price <= Number(f.price))
       && (f.hours === "" || (g.hours != null && g.hours <= Number(f.hours))))
@@ -131,6 +142,8 @@ function render() {
 }
 
 form.addEventListener("input", () => { limit = PAGE; render(); });
+// "reset" fires before the fields are reset, so render on the next tick.
+form.addEventListener("reset", () => setTimeout(() => { limit = PAGE; render(); }));
 // Clicking a tag on a card filters by it.
 list.addEventListener("click", (e) => {
   const tag = e.target.closest("[data-tag]")?.dataset.tag;

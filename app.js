@@ -1,4 +1,4 @@
-import { worthScore, dealScore, dadScore, multiplayerScore, typicalPrice, isOnline, isPatient, launchTrend, fmtN } from "./score.js";
+import { worthScore, dealScore, dadScore, multiplayerScore, typicalPrice, isPatient, launchTrend, fmtN } from "./score.js";
 
 const form = document.getElementById("filters");
 const list = document.getElementById("list");
@@ -96,13 +96,6 @@ function priceChart(g) {
   </figure>`;
 }
 
-// "2015-2019", "-2014" or "2024-": inclusive year range, open on the empty side.
-function inYears(released, range) {
-  const [from, to] = range.split("-").map((y) => (y ? Number(y) : null));
-  const y = Number(released.slice(0, 4));
-  return (from == null || y >= from) && (to == null || y <= to);
-}
-
 // The patient gamer's four numbers, big: how good it is now, whether it got
 // better since launch, what it costs, and how far that is from its best price.
 function kpis(g) {
@@ -137,12 +130,9 @@ function render() {
     .filter((g) => (f.sort !== "mp" || g.mp) // the multiplayer ranking lists online games only
       && (!q || g.title.toLowerCase().includes(q))
       && (!f.genre || g.tags?.includes(f.genre))
-      && (!f.play || (f.play === "single" ? g.singleplayer : f.play === "coop" ? g.onlineCoop : g.onlinePvp))
       && (!f.deal || (f.deal === "sale" ? g.regularPrice > g.price * 1.05 : g.price > 0 && g.lowest != null && g.price <= g.lowest))
-      && (!f.year || inYears(g.released, f.year))
       && (f.show === "all" || g.patient)
       && (!f.mine || (f.mine === "open" ? mine[g.appid] !== "own" : mine[g.appid] === f.mine))
-      && (!f.deck || g.deck === "verified" || (f.deck === "playable" && g.deck === "playable"))
       && (f.price === "" || g.price <= Number(f.price))
       && (f.hours === "" || (g.hours != null && g.hours <= Number(f.hours))))
     .sort((a, b) => sortKey[f.sort](b) - sortKey[f.sort](a));
@@ -161,24 +151,18 @@ function render() {
       </div>
       <div>
         <h2><a href="https://store.steampowered.com/app/${g.appid}/">${esc(g.title)}</a></h2>
-        <ul class="chips">
-          <li>${g.released.slice(0, 4)}</li>
-          <li>${g.hltbId ? `<a href="https://howlongtobeat.com/game/${g.hltbId}">${g.hours}h</a>` : "? h"}</li>
-          ${g.metacriticUrl ? `<li><a href="${esc(g.metacriticUrl)}">Metascore ${g.metascore}</a></li>` : ""}
-          ${g.earlyAccess ? `<li class="warn">Early Access</li>` : ""}
-          ${g.liveService ? `<li class="warn">Live service</li>` : ""}
-          ${isOnline(g) ? `<li>${g.singleplayer === false ? "Online only: " : ""}${[g.onlineCoop && "Online co-op", g.onlinePvp && "PvP", g.mmo && "MMO"].filter(Boolean).join(" · ")}</li>` : ""}
-          <li class="${g.deck === "verified" ? "good" : ""}">Deck ${g.deck}</li>
-          ${(g.tags ?? []).map((t) => `<li class="tag"><button type="button" data-tag="${esc(t)}">${esc(t)}</button></li>`).join("")}
-        </ul>
+        <p class="meta">${[
+          g.released.slice(0, 4),
+          g.hltbId ? `<a href="https://howlongtobeat.com/game/${g.hltbId}">${g.hours}h</a>` : null,
+          g.metacriticUrl ? `<a href="${esc(g.metacriticUrl)}">Metascore ${g.metascore}</a>` : null,
+          g.earlyAccess && "Early Access",
+          g.liveService && "Live service",
+        ].filter(Boolean).join(" · ")}</p>
         ${kpis(g)}
         ${bar("Worth the wait", g.worth, "", "primary")}
         ${bar("Buy now", g.deal, "free to play", "primary")}
         ${priceChart(g)}
-        <div class="lenses">
-          ${bar("Gamer Dad", g.dad, "", "minor")}
-          ${g.mp ? bar("Multiplayer", g.mp, "", "minor") : ""}
-        </div>
+        ${f.sort === "dad" ? bar("Gamer Dad", g.dad) : f.sort === "mp" ? bar("Multiplayer", g.mp) : ""}
       </div>
     </li>`).join("");
 }
@@ -197,15 +181,6 @@ list.addEventListener("click", (e) => {
   else mine[appid] = btn.dataset.status;
   saveMine();
   render();
-});
-// Clicking a tag on a card filters by it.
-list.addEventListener("click", (e) => {
-  const tag = e.target.closest("[data-tag]")?.dataset.tag;
-  if (!tag) return;
-  form.genre.value = tag;
-  limit = PAGE;
-  render();
-  window.scrollTo({ top: 0, behavior: "smooth" });
 });
 more.addEventListener("click", () => { limit += PAGE; render(); });
 render();

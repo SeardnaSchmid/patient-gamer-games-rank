@@ -154,6 +154,33 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
 }
 .reset:hover { text-decoration: underline; }
 .group select.set { background-color: var(--accent); color: var(--bg); font-weight: 600; }
+/* Rank by: the main choice, so tabs above the list rather than chips in the sidebar. */
+.rank-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 12px; }
+.rank-tabs label { position: relative; }
+.rank-tabs input { position: absolute; opacity: 0; pointer-events: none; }
+.rank-tabs span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  cursor: pointer;
+}
+.rank-tabs b { font-size: 1rem; }
+.rank-tabs small { font-size: 0.78rem; color: var(--muted); }
+.rank-tabs span:hover { border-color: var(--muted); }
+.rank-tabs input:checked + span { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--card)); box-shadow: inset 0 -3px 0 var(--accent); }
+.rank-tabs input:checked + span b { color: var(--accent); }
+.rank-tabs input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 959px) {
+  .rank-tabs { margin-top: 16px; }
+  /* With this many filter groups a sticky bar would cover half a phone screen. */
+  #filters { position: static; }
+}
+@media (max-width: 560px) { .rank-tabs { grid-template-columns: 1fr 1fr; } }
 .mine { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
 .mine button {
   padding: 2px 9px;
@@ -329,7 +356,6 @@ h2 a { color: inherit; }
         <button type="reset" class="reset">Reset filters</button>
         <label class="group"><span class="label">Genre</span><select name="genre"><option value="">Any</option></select></label>
         <div class="group" role="radiogroup" aria-label="My games"><span class="label">My games</span><label><input type="radio" name="mine" value="" checked /><span>All</span></label><label><input type="radio" name="mine" value="open" /><span>Not owned</span></label><label><input type="radio" name="mine" value="wish" /><span>Wishlist</span></label><label><input type="radio" name="mine" value="own" /><span>Owned</span></label><label><input type="radio" name="mine" value="played" /><span>Played</span></label></div>
-        <div class="group" role="radiogroup" aria-label="Rank by"><span class="label">Rank by</span><label><input type="radio" name="sort" value="worth" checked /><span>Worth it</span></label><label><input type="radio" name="sort" value="deal" /><span>Buy now</span></label><label><input type="radio" name="sort" value="dad" /><span>Gamer Dad</span></label><label><input type="radio" name="sort" value="mp" /><span>Multiplayer</span></label></div>
         <div class="group" role="radiogroup" aria-label="Play"><span class="label">Play</span><label><input type="radio" name="play" value="" checked /><span>Any</span></label><label><input type="radio" name="play" value="single" /><span>Single-player</span></label><label><input type="radio" name="play" value="coop" /><span>Online co-op</span></label><label><input type="radio" name="play" value="pvp" /><span>PvP</span></label></div>
         <div class="group" role="radiogroup" aria-label="Price"><span class="label">Price</span><label><input type="radio" name="price" value="" checked /><span>Any</span></label><label><input type="radio" name="price" value="0" /><span>Free</span></label><label><input type="radio" name="price" value="5" /><span>≤ $5</span></label><label><input type="radio" name="price" value="10" /><span>≤ $10</span></label><label><input type="radio" name="price" value="20" /><span>≤ $20</span></label></div>
         <div class="group" role="radiogroup" aria-label="Deal"><span class="label">Deal</span><label><input type="radio" name="deal" value="" checked /><span>Any</span></label><label><input type="radio" name="deal" value="sale" /><span>On sale</span></label><label><input type="radio" name="deal" value="low" /><span>All-time low</span></label></div>
@@ -341,6 +367,12 @@ h2 a { color: inherit; }
     </form>
 
     <main>
+      <div class="rank-tabs" id="rank-tabs" role="radiogroup" aria-label="Rank by">
+        <label><input type="radio" form="filters" name="sort" value="worth" checked /><span><b>Worth it</b><small>Good and finished today</small></span></label>
+        <label><input type="radio" form="filters" name="sort" value="deal" /><span><b>Buy now</b><small>Best moment to buy</small></span></label>
+        <label><input type="radio" form="filters" name="sort" value="dad" /><span><b>Gamer Dad</b><small>Fits a busy life</small></span></label>
+        <label><input type="radio" form="filters" name="sort" value="mp" /><span><b>Multiplayer</b><small>Community still alive</small></span></label>
+      </div>
       <p id="count" aria-live="polite"></p>
       <ol id="list"></ol>
       <button id="more" type="button" hidden>Show more</button>

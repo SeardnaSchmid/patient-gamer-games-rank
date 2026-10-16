@@ -57,7 +57,7 @@ for (const [t, n] of [...tagCount].sort((a, b) => b[1] - a[1])) form.genre.add(n
 const params = new URLSearchParams(location.hash.slice(1));
 for (const [k, v] of params) if (form[k]) form[k].value = v;
 // A hash value with no matching chip (e.g. an old link) leaves its group empty; fall back to the first chip.
-for (const g of form.querySelectorAll(".group")) if (!g.querySelector(":checked")) g.querySelector("input").checked = true;
+for (const g of document.querySelectorAll(".group, #rank-tabs")) if (!g.querySelector(":checked")) g.querySelector("input").checked = true;
 
 // Ties fall back to "Worth it", so equally cheap games still rank by quality.
 const sortKey = {
@@ -168,6 +168,8 @@ function render() {
 }
 
 form.addEventListener("input", () => { limit = PAGE; render(); });
+// The rank tabs sit outside the form (form="filters"), so their events don't bubble to it.
+document.getElementById("rank-tabs").addEventListener("input", () => { limit = PAGE; render(); });
 // "reset" fires before the fields are reset, so render on the next tick.
 form.addEventListener("reset", () => setTimeout(() => { limit = PAGE; render(); }));
 // Status buttons toggle: clicking the active one clears it.

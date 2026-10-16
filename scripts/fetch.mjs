@@ -4,12 +4,13 @@
 //              >= MIN_PCT % positive (also gives reviews and Steam price).
 // Fixed values Fetched once per game and kept (refreshed after REFRESH_DAYS):
 //              Steam store (release, Metascore, features), Steam Deck rating,
+//              SteamSpy user tags (genres like "Metroidvania", not Steam's coarse ones),
 //              HowLongToBeat main-story hours (unofficial site API, may break).
 //              At most LIMIT games get these per run, so the catalogue fills
 //              up over several runs instead of hammering the APIs.
 // Prices       CheapShark, 25 games per request, every run: best current price
 //              across stores and the all-time low.
-// A lookup that fails keeps the game's previous value. Progress is saved every
+// A lookup that fails keeps the game's previous value. Env: LIMIT, MAX_MINUTES. Progress is saved every
 // 50 games, so the script can be stopped and restarted.
 import { readFileSync, writeFileSync } from "node:fs";
 
@@ -17,6 +18,9 @@ const MIN_REVIEWS = 1000;
 const MIN_PCT = 75;
 const LIMIT = Number(process.env.LIMIT ?? 300);
 const REFRESH_DAYS = 90;
+// Stop fetching details after this many minutes so prices and the final save
+// still fit in a GitHub Actions job (6 h max).
+const DEADLINE = Date.now() + Number(process.env.MAX_MINUTES ?? 1e6) * 60_000;
 
 const UA = "patient-gamer-games-rank/1.0 (+https://github.com/SeardnaSchmid/patient-gamer-games-rank)";
 const BROWSER_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36";
@@ -36,25 +40,19 @@ async function json(url, opts = {}) {
 // --- candidates -------------------------------------------------------------
 
 // SteamSpy pages hold 1000 games each, most-owned first, and allow 1 request
-// per minute. Stop once a page adds almost nothing.
-async function candidates() {
-  const found = new Map();
-  for (let page = 0; page < 40; page++) {
-    if (page) await sleep(61_000);
-    const all = Object.values(await json(`https://steamspy.com/api.php?request=all&page=${page}`));
-    const good = all.filter((g) => {
-      const n = g.positive + g.negative;
-      return n >= MIN_REVIEWS && (g.positive / n) * 100 >= MIN_PCT;
-    });
-    for (const g of good) found.set(g.appid, {
-      steamPct: Math.round((g.positive / (g.positive + g.negative)) * 100),
-      steamReviews: g.positive + g.negative,
-      steamPrice: Number(g.price) / 100,
-    });
-    console.log(`SteamSpy page ${page}: ${good.length} of ${all.length} qualify (${found.size} total)`);
-    if (all.length < 1000 || good.length < 20) break;
-  }
-  return found;
+// per minute. Returns the qualifying games and whether more pages are worth asking for.
+async function candidatePage(page) {
+  const all = Object.values(await json(`https://steamspy.com/api.php?request=all&page=${page}`));
+  const good = all.filter((g) => {
+    const n = g.positive + g.negative;
+    return n >= MIN_REVIEWS && (g.positive / n) * 100 >= MIN_PCT;
+  }).map((g) => ({
+    appid: g.appid,
+    steamPct: Math.round((g.positive / (g.positive + g.negative)) * 100),
+    steamReviews: g.positive + g.negative,
+    steamPrice: Number(g.price) / 100,
+  }));
+  return { good, more: all.length === 1000 && good.length >= 20 };
 }
 
 // --- fixed values -----------------------------------------------------------
@@ -78,6 +76,22 @@ async function steam(appid) {
     // Free-to-play with in-app purchases, or an MMO: a game that never ends by design.
     liveService: (g.is_free && cats.has("In-App Purchases")) || cats.has("MMO") || genres.has("Massively Multiplayer"),
   };
+}
+
+// Tags that describe the audience or mood rather than the kind of game.
+const NOT_GENRE = new Set(["Indie", "Singleplayer", "Multiplayer", "Great Soundtrack", "Atmospheric", "Story Rich", "Classic",
+  "Masterpiece", "Beautiful", "Cute", "Funny", "Colorful", "Difficult", "Female Protagonist", "Free to Play", "Early Access",
+  "Controller", "Family Friendly", "Relaxing", "Addictive", "Replay Value", "Choices Matter", "Moddable", "Fantasy", "Sci-fi",
+  "Casual", "Action", "Adventure", "Simulation", "Strategy", "RPG", "2D", "3D", "Pixel Graphics", "Stylized", "Cartoony",
+  "Hand-drawn", "Anime", "Realistic", "First-Person", "Third Person", "Online Co-Op", "Co-op", "PvP", "Mature", "Violent",
+  "Gore", "Nudity", "Sexual Content", "Dark", "Psychological", "Emotional", "Comedy", "Mythology", "Exploration"]);
+// Steam lists some apps (Wallpaper Engine, …) as games; their tags give them away.
+const SOFTWARE = /^(Software|Utilities|Design & Illustration|Animation & Modeling|Video Production|Audio Production|Photo Editing|Web Publishing|Game Development)$/;
+async function tags(appid) {
+  const t = (await json(`https://steamspy.com/api.php?request=appdetails&appid=${appid}`)).tags;
+  // SteamSpy returns [] for a game without tags, else {tag: votes} sorted by votes.
+  const all = Object.keys(Array.isArray(t) ? {} : t);
+  return { tags: all.filter((k) => !NOT_GENRE.has(k)).slice(0, 4), software: all.slice(0, 5).some((k) => SOFTWARE.test(k)) };
 }
 
 const DECK = { 3: "verified", 2: "playable", 1: "unsupported" };
@@ -147,40 +161,93 @@ try { saved = JSON.parse(readFileSync("games.json")); } catch {}
 const previous = new Map(saved.games.map((g) => [g.appid, g]));
 const skipped = new Set(saved.skipped ?? []);
 
-const found = await candidates();
-const games = [...found].filter(([appid]) => !skipped.has(appid)).map(([appid, live]) => ({ ...previous.get(appid), appid, ...live }));
+// Every known game, so a partial run never drops data; games that no longer
+// qualify are removed once all candidate pages are in.
+const games = new Map([...previous].filter(([appid]) => !skipped.has(appid)));
+const candidates = new Set();
+function addCandidates(list) {
+  for (const live of list) {
+    if (skipped.has(live.appid)) continue;
+    candidates.add(live.appid);
+    games.set(live.appid, { ...games.get(live.appid), ...live });
+  }
+}
+
+// Page 0 holds the most-played games; details start on those right away while
+// the remaining pages (one per minute) trickle in alongside.
+let page = 0;
+let first = await candidatePage(page);
+addCandidates(first.good);
+console.log(`SteamSpy page 0: ${first.good.length} qualify`);
+let allPagesIn = !first.more;
+const pagesDone = (async () => {
+  for (let more = first.more; more; ) {
+    await sleep(61_000);
+    try {
+      const r = await candidatePage(++page);
+      addCandidates(r.good);
+      more = r.more;
+      console.log(`SteamSpy page ${page}: ${r.good.length} qualify (${candidates.size} candidates)`);
+    } catch (e) { console.warn(`  steamspy page ${page}: ${e.message}`); break; }
+  }
+  allPagesIn = true;
+})();
 
 function save(final) {
-  const done = games.filter((g) => g.fetched && g.released);
+  const done = [...games.values()].filter((g) => g.fetched && g.released && (!final || candidates.has(g.appid)));
   for (const g of done) {
     g.price ??= g.steamPrice;
     g.lowest = Math.min(g.lowest ?? g.price, g.price);
   }
   const lines = done.sort((a, b) => b.steamReviews - a.steamReviews).map((g) => " " + JSON.stringify(g));
   writeFileSync("games.json", `{"updated":"${today}","skipped":${JSON.stringify([...skipped].sort((a, b) => a - b))},"games":[\n${lines.join(",\n")}\n]}\n`);
-  if (final) console.log(`${done.length} games with data, ${games.length - done.length} still waiting for details`);
+  if (final) console.log(`${done.length} games with data, ${candidates.size - done.length} candidates still waiting for details`);
 }
 
 // Never fetched first, then the stalest; most-reviewed first within each group.
-const stale = (g) => !g.fetched || (Date.now() - new Date(g.fetched)) / 864e5 > REFRESH_DAYS;
-const todo = games.filter(stale).sort((a, b) => !!a.fetched - !!b.fetched || b.steamReviews - a.steamReviews).slice(0, LIMIT);
-console.log(`${games.length} candidates, fetching details for ${todo.length}`);
-
-let n = 0;
-for (const game of todo) {
-  try {
-    const s = await steam(game.appid);
-    if (s.notAGame) { skipped.add(game.appid); game.fetched = null; continue; }
-    Object.assign(game, s);
-    Object.assign(game, await deck(game.appid));
-    await sleep(1500); // Steam's appdetails allows ~200 requests per 5 minutes
-  } catch (e) { console.warn(`  steam ${game.appid}: ${e.message}`); continue; }
-  try { Object.assign(game, await cheapsharkId(game.appid)); } catch (e) { console.warn(`  cheapshark ${game.title}: ${e.message}`); }
-  try { Object.assign(game, await hltb(game.title, Number(game.released?.slice(0, 4)))); } catch (e) { console.warn(`  hltb ${game.title}: ${e.message}`); }
-  game.fetched = today;
-  console.log(`${++n}/${todo.length} ${game.title} · MC ${game.metascore} · ${game.steamPct}% · ${game.hours}h · deck ${game.deck}`);
-  if (n % 50 === 0) save(false);
+const stale = (g) => !g.fetched || !g.tags || (Date.now() - new Date(g.fetched)) / 864e5 > REFRESH_DAYS;
+const attempted = new Set();
+function next() {
+  let best;
+  for (const id of candidates) {
+    const g = games.get(id);
+    if (attempted.has(id) || !stale(g)) continue;
+    if (!best || (!!g.fetched - !!best.fetched || best.steamReviews - g.steamReviews) < 0) best = g;
+  }
+  return best;
 }
 
-await prices(games.filter((g) => g.fetched));
+let n = 0;
+while (n < LIMIT && Date.now() < DEADLINE) {
+  const game = next();
+  if (!game) {
+    if (allPagesIn) break;
+    await sleep(5000); // wait for the next SteamSpy page
+    continue;
+  }
+  attempted.add(game.appid);
+  const started = Date.now();
+  try {
+    const s = await steam(game.appid);
+    if (s.notAGame) { skipped.add(game.appid); candidates.delete(game.appid); games.delete(game.appid); continue; }
+    Object.assign(game, s);
+  } catch (e) { console.warn(`  steam ${game.appid}: ${e.message}`); await sleep(1500); continue; }
+  // The other sources run side by side while Steam's rate limit (~200 appdetails
+  // per 5 minutes) makes us wait anyway. A miss keeps the previous value.
+  const results = await Promise.allSettled([
+    deck(game.appid), tags(game.appid), cheapsharkId(game.appid), hltb(game.title, Number(game.released?.slice(0, 4))),
+  ]);
+  results.forEach((r, i) => r.status === "fulfilled" ? Object.assign(game, r.value) : console.warn(`  ${["deck", "tags", "cheapshark", "hltb"][i]} ${game.title}: ${r.reason.message}`));
+  if (game.software) { skipped.add(game.appid); candidates.delete(game.appid); games.delete(game.appid); continue; }
+  delete game.software;
+  game.deck ??= "unknown";
+  game.fetched = today;
+  console.log(`${++n} ${game.title} · MC ${game.metascore} · ${game.steamPct}% · ${game.hours}h · deck ${game.deck} · ${game.tags?.join(", ")}`);
+  if (n % 50 === 0) save(false);
+  await sleep(Math.max(0, 1500 - (Date.now() - started)));
+}
+
+save(false);
+await pagesDone; // games that dropped below the thresholds only count as gone once every page is in
+await prices([...games.values()].filter((g) => g.fetched));
 save(true);

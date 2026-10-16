@@ -9,7 +9,7 @@ let limit = PAGE;
 
 // My games: a status per game, kept in this browser only.
 const STATUS_KEY = "pgr.status.v1";
-const STATUSES = { wish: "♡ Wishlist", own: "✓ Owned", played: "▶ Played", skip: "✕ Not for me" };
+const STATUSES = { wish: ["♥", "Wishlist"], own: ["✓", "Owned"] };
 let mine = {};
 try { mine = JSON.parse(localStorage.getItem(STATUS_KEY)) ?? {}; } catch {}
 const saveMine = () => { try { localStorage.setItem(STATUS_KEY, JSON.stringify(mine)); } catch {} };
@@ -143,7 +143,7 @@ function render() {
       && (!f.deal || (f.deal === "sale" ? g.regularPrice > g.price * 1.05 : g.price > 0 && g.lowest != null && g.price <= g.lowest))
       && (!f.year || inYears(g.released, f.year))
       && (f.show === "all" || g.patient)
-      && (!f.mine || (f.mine === "open" ? !["own", "played", "skip"].includes(mine[g.appid]) : mine[g.appid] === f.mine))
+      && (!f.mine || (f.mine === "open" ? mine[g.appid] !== "own" : mine[g.appid] === f.mine))
       && (!f.deck || g.deck === "verified" || (f.deck === "playable" && g.deck === "playable"))
       && (f.price === "" || g.price <= Number(f.price))
       && (f.hours === "" || (g.hours != null && g.hours <= Number(f.hours))))
@@ -153,10 +153,14 @@ function render() {
   count.textContent = f.show === "all" ? `${shown.length} of ${games.length} games` : `${shown.length} patient games`;
   more.hidden = shown.length <= limit;
   list.innerHTML = shown.slice(0, limit).map((g) => `
-    <li class="${mine[g.appid] === "skip" ? "skipped" : ""}">
-      <a class="cover" href="https://store.steampowered.com/app/${g.appid}/">
-        <img loading="lazy" alt="" src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg" />
-      </a>
+    <li>
+      <div class="cover">
+        <a href="https://store.steampowered.com/app/${g.appid}/">
+          <img loading="lazy" alt="" src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg" />
+        </a>
+        <div class="mine" data-appid="${g.appid}">${Object.entries(STATUSES).map(([k, [icon, label]]) =>
+          `<button type="button" data-status="${k}" aria-pressed="${mine[g.appid] === k}" title="${label}" aria-label="${label}">${icon}</button>`).join("")}</div>
+      </div>
       <div>
         <h2><a href="https://store.steampowered.com/app/${g.appid}/">${esc(g.title)}</a></h2>
         <ul class="chips">
@@ -173,8 +177,6 @@ function render() {
         ${bar("Worth the wait", g.worth, "", "primary")}
         ${bar("Buy now", g.deal, "free to play", "primary")}
         ${priceChart(g)}
-        <div class="mine" data-appid="${g.appid}">${Object.entries(STATUSES).map(([k, t]) =>
-          `<button type="button" data-status="${k}" aria-pressed="${mine[g.appid] === k}">${t}</button>`).join("")}</div>
         <div class="lenses">
           ${bar("Gamer Dad", g.dad, "", "minor")}
           ${g.mp ? bar("Multiplayer", g.mp, "", "minor") : ""}

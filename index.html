@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Ranks games by when they're worth buying and whether they fit a busy schedule." />
+    <meta name="description" content="Patient games ranked: patched, complete, and how good today's deal is." />
     <title>Patient Gamers Rank</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏳</text></svg>" />
     <style>
@@ -155,7 +155,12 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
 .reset:hover { text-decoration: underline; }
 .group select.set { background-color: var(--accent); color: var(--bg); font-weight: 600; }
 /* Rank by: the main choice, so tabs above the list rather than chips in the sidebar. */
-.rank-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 12px; }
+.rank-tabs { display: grid; grid-template-columns: 1fr 1fr auto auto; grid-template-rows: auto 1fr; gap: 6px 8px; margin: 0 0 12px; }
+.rank-tabs .major { grid-row: 1 / 3; }
+.rank-tabs .minor-label { grid-column: 3 / 5; align-self: end; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.rank-tabs .major b { font-size: 1.15rem; }
+.rank-tabs .minor span { justify-content: center; padding: 6px 12px; }
+.rank-tabs .minor b { font-size: 0.85rem; font-weight: 600; }
 .rank-tabs label { position: relative; }
 .rank-tabs input { position: absolute; opacity: 0; pointer-events: none; }
 .rank-tabs span {
@@ -180,7 +185,31 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
   /* With this many filter groups a sticky bar would cover half a phone screen. */
   #filters { position: static; }
 }
-@media (max-width: 560px) { .rank-tabs { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) {
+  .rank-tabs { grid-template-columns: 1fr 1fr; grid-template-rows: none; }
+  .rank-tabs .major { grid-row: auto; }
+  .rank-tabs .minor-label { grid-column: 1 / 3; }
+}
+
+/* KPI tiles: the numbers a patient gamer decides on. */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 0 0 10px; }
+.kpi { display: flex; flex-direction: column; padding: 6px 10px; border-radius: 8px; background: var(--chip); min-width: 0; }
+.kpi span { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.kpi b { font-size: 1.25rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.kpi small { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi.good b { color: var(--good); }
+.kpi.bad b { color: var(--low); }
+@media (max-width: 560px) { .kpis { grid-template-columns: 1fr 1fr; } }
+
+/* Patient scores first and bold; the other lenses small and quiet. */
+.score.primary summary { font-weight: 600; font-size: 0.92rem; grid-template-columns: 120px 1fr 30px; }
+.score.primary .bar { height: 10px; }
+.score.primary b { font-size: 1rem; }
+.lenses { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; padding-top: 6px; border-top: 1px solid var(--line); }
+.score.minor summary, .score.minor.none { font-size: 0.75rem; color: var(--muted); grid-template-columns: 80px 1fr 24px; }
+.score.minor .bar { height: 5px; }
+.score.minor ul { grid-column: 1 / -1; }
+@media (max-width: 560px) { .lenses { grid-template-columns: 1fr; } }
 .mine { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
 .mine button {
   padding: 2px 9px;
@@ -344,7 +373,7 @@ h2 a { color: inherit; }
       <div class="hero-text">
         <p class="eyebrow">⏳ For gamers who can wait</p>
         <h1>Patient Gamers Rank</h1>
-        <p class="claim">Wait for the sale, skip the launch bugs, finish what you start.</p>
+        <p class="claim">The games worth playing now that the hype is over: patched, complete, and ranked by how well they aged and how good today's deal is.</p>
         <p class="stats" id="stats"></p>
       </div>
     </header>
@@ -362,16 +391,17 @@ h2 a { color: inherit; }
         <div class="group" role="radiogroup" aria-label="Length"><span class="label">Length</span><label><input type="radio" name="hours" value="" checked /><span>Any</span></label><label><input type="radio" name="hours" value="5" /><span>≤ 5h</span></label><label><input type="radio" name="hours" value="10" /><span>≤ 10h</span></label><label><input type="radio" name="hours" value="20" /><span>≤ 20h</span></label><label><input type="radio" name="hours" value="40" /><span>≤ 40h</span></label></div>
         <div class="group" role="radiogroup" aria-label="Released"><span class="label">Released</span><label><input type="radio" name="year" value="" checked /><span>Any</span></label><label><input type="radio" name="year" value="-2014" /><span>≤ 2014</span></label><label><input type="radio" name="year" value="2015-2019" /><span>2015–19</span></label><label><input type="radio" name="year" value="2020-2023" /><span>2020–23</span></label><label><input type="radio" name="year" value="2024-" /><span>2024+</span></label></div>
         <div class="group" role="radiogroup" aria-label="Steam Deck"><span class="label">Steam Deck</span><label><input type="radio" name="deck" value="" checked /><span>Any</span></label><label><input type="radio" name="deck" value="playable" /><span>Playable</span></label><label><input type="radio" name="deck" value="verified" /><span>Verified</span></label></div>
-        <div class="group" role="radiogroup" aria-label="Show"><span class="label">Show</span><label><input type="radio" name="show" value="" checked /><span>All</span></label><label><input type="radio" name="show" value="finished" /><span>Finished only</span></label></div>
+        <div class="group" role="radiogroup" aria-label="Show"><span class="label">Show</span><label><input type="radio" name="show" value="" checked /><span>Patient games</span></label><label><input type="radio" name="show" value="all" /><span>All games</span></label></div>
       </div>
     </form>
 
     <main>
       <div class="rank-tabs" id="rank-tabs" role="radiogroup" aria-label="Rank by">
-        <label><input type="radio" form="filters" name="sort" value="worth" checked /><span><b>Worth it</b><small>Good and finished today</small></span></label>
-        <label><input type="radio" form="filters" name="sort" value="deal" /><span><b>Buy now</b><small>Best moment to buy</small></span></label>
-        <label><input type="radio" form="filters" name="sort" value="dad" /><span><b>Gamer Dad</b><small>Fits a busy life</small></span></label>
-        <label><input type="radio" form="filters" name="sort" value="mp" /><span><b>Multiplayer</b><small>Community still alive</small></span></label>
+        <label class="major"><input type="radio" form="filters" name="sort" value="worth" checked /><span><b>Worth the wait</b><small>Good and finished now that the hype is over</small></span></label>
+        <label class="major"><input type="radio" form="filters" name="sort" value="deal" /><span><b>Buy now</b><small>The patient moment: deep discount, near its lowest price</small></span></label>
+        <span class="minor-label">Other lenses</span>
+        <label class="minor"><input type="radio" form="filters" name="sort" value="dad" /><span><b>Gamer Dad</b></span></label>
+        <label class="minor"><input type="radio" form="filters" name="sort" value="mp" /><span><b>Multiplayer</b></span></label>
       </div>
       <p id="count" aria-live="polite"></p>
       <ol id="list"></ol>
@@ -383,9 +413,10 @@ h2 a { color: inherit; }
       <p>Data from <a href="https://store.steampowered.com/">Steam</a> (price, Metascore, reviews, Deck status, features), <a href="https://www.cheapshark.com/">CheapShark</a> (best price and all-time low) and <a href="https://howlongtobeat.com/">HowLongToBeat</a> (playtime). Updated <span id="updated"></span>.</p>
       <details>
         <summary>How the scores work</summary>
-        <p><b>Worth it</b> (0–100), is it good and finished today? 50 for quality now (Steam reviews of the last 6 months, adjusted for how many there are), 25 for how reviews moved since the launch quarter (held up 15, fixed since launch 25), 15 for being out a year and not Early Access or live service, 10 for the Metascore.</p>
+        <p><b>Patient games</b> are out for at least a year and finished: not Early Access, not live service. The page shows only those unless you pick "All games".</p>
+        <p><b>Worth the wait</b> (0–100), is it good and finished today? 50 for quality now (Steam reviews of the last 6 months, adjusted for how many there are), 25 for how reviews moved since the launch quarter (held up 15, fixed since launch 25), 15 for being out a year and not Early Access or live service, 10 for the Metascore.</p>
         <p><b>Buy now</b> (0–100), is today the moment? 40 for the discount off Steam's list price (75 % off or more), 40 for being at the all-time low (CheapShark), 20 for being below the price the game usually sits at. That last part needs 30 days of price history tracked here; until then the other two count 50 each. Free games have no deal score.</p>
-        <p><b>Gamer Dad</b> (0–100), does it fit a busy schedule? 30 for a main story of 10 hours or less, 25 for quality now, 15 for Steam Deck Verified (8 for Playable), 10 for full controller support (5 partial), 10 for Steam Cloud saves, 10 for the Steam "Save Anytime" tag, −20 for live service.</p>
+        <p>Two other lenses, not the focus: <b>Gamer Dad</b> (0–100), does it fit a busy schedule? 30 for a main story of 10 hours or less, 25 for quality now, 15 for Steam Deck Verified (8 for Playable), 10 for full controller support (5 partial), 10 for Steam Cloud saves, 10 for the Steam "Save Anytime" tag, −20 for live service.</p>
         <p><b>Multiplayer</b> (0–100, games with online play only), is the community still there? 35 for players (log scale, 10k peak a day is full), 25 for review activity in the last 6 months compared with the 6 before, 25 for quality now, 15 for an announcement from the developers within the last 3 months.</p>
         <p>Prices are US dollars, the cheapest offer across stores. Click a score to see each value it's based on.</p>
       </details>

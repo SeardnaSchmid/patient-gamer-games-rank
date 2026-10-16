@@ -1,9 +1,12 @@
 # Patient Gamers Rank
 
-A static page that ranks games for patient gamers. Two scores answer the patient gamer's two questions, two more are separate lenses:
+A static page that ranks patient games: games out for at least a year and finished (not Early Access, not live service), so the hype is over, the patches are in and the price has dropped. Two scores answer the patient gamer's two questions, and the cards show the numbers behind them (reviews now, change since launch, price and discount, distance to the all-time low):
 
-- **Worth it**: is the game good and finished today? Quality from the last 6 months of Steam reviews, how reviews moved since the launch quarter (was it fixed?), out a year and not Early Access or live service, Metascore.
+- **Worth the wait**: is the game good and finished today? Quality from the last 6 months of Steam reviews, how reviews moved since the launch quarter (was it fixed?), out a year and not Early Access or live service, Metascore.
 - **Buy now**: is today the moment? Discount off the list price, distance to the all-time low, and, once 30 days are tracked, whether the price is below what the game usually costs.
+
+Two other lenses sit beside them, not in the focus:
+
 - **Gamer Dad**: does it fit a busy schedule? Short main story, quality, Steam Deck, controller, cloud saves, "Save Anytime".
 - **Multiplayer** (online games only): is the community still there? Players, review activity now vs. half a year ago, quality, recent developer announcements.
 

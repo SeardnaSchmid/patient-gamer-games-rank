@@ -2,7 +2,7 @@
 // value (see scripts/fetch.mjs) or derived from the price history; each part
 // carries the value it is based on so the page can show the reasoning.
 //
-//   Worth it     Is the game good and finished today?        (patient gamer)
+//   Worth the wait  Is the game good and finished today?     (patient gamer)
 //   Buy now      Is today a good moment to buy it?            (patient gamer)
 //   Gamer Dad    Does it fit a busy schedule?
 //   Multiplayer  Is the online part still alive, years on?    (online games only)
@@ -11,7 +11,7 @@ const DAY = 864e5;
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 // Linear ramp: 0 at `from`, `max` at `to` (works for descending ranges too).
 const ramp = (v, from, to, max) => clamp((v - from) / (to - from), 0, 1) * max;
-const fmtN = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : `${n}`);
+export const fmtN = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : `${n}`);
 
 export function ageMonths(game, now = new Date()) {
   const d = new Date(game.released);
@@ -37,11 +37,19 @@ export function qualityNow(g) {
 
 export const isOnline = (g) => !!(g.onlineCoop || g.onlinePvp || g.mmo);
 
+// A patient game: out for a year, and finished (not Early Access, not live service).
+export const isPatient = (g, now = new Date()) => ageMonths(g, now) >= 12 && !g.earlyAccess && !g.liveService;
+
+// Positive-% points gained since the launch quarter, or null when there is no
+// fair comparison yet (too young, or too few reviews in either window).
+export function launchTrend(g, now = new Date()) {
+  return ageMonths(g, now) >= 9 && g.launchReviews >= 20 && g.recentReviews >= 20 ? g.recentPct - g.launchPct : null;
+}
+
 export function worthScore(g, now = new Date()) {
   const age = ageMonths(g, now);
   const q = qualityNow(g);
-  // The launch quarter and the last 6 months only compare once they don't overlap.
-  const trend = age >= 9 && g.launchReviews >= 20 && g.recentReviews >= 20 ? g.recentPct - g.launchPct : null;
+  const trend = launchTrend(g, now);
   return total({
     "Quality now": [q.value == null ? 0 : ramp(q.value, 70, 95, 50), q.note],
     // Held up (±0) earns 15 of 25, fixed since launch earns the rest.

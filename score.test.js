@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { worthScore, dealScore, dadScore, multiplayerScore, typicalPrice, rating, ageMonths } from "./score.js";
+import { worthScore, dealScore, dadScore, multiplayerScore, typicalPrice, rating, ageMonths, isPatient } from "./score.js";
 
 const DAY = 864e5;
 const now = new Date("2026-10-01");
@@ -81,6 +81,13 @@ test("typical price is where the game sat for at least half the time", () => {
   const pts = [[t0, 20], [t0 + 40 * DAY, 5], [t0 + 50 * DAY, 20]];
   assert.equal(typicalPrice(pts, t0 + 60 * DAY), 20);
   assert.equal(typicalPrice(pts, t0 + 20 * DAY), null); // under 30 days
+});
+
+test("patient games are a year old and finished", () => {
+  assert.ok(isPatient(base, now));
+  assert.ok(!isPatient({ ...base, released: "2026-01-01" }, now));
+  assert.ok(!isPatient({ ...base, earlyAccess: true }, now));
+  assert.ok(!isPatient({ ...base, liveService: true }, now));
 });
 
 test("age in months", () => assert.equal(ageMonths(base, now), 45));

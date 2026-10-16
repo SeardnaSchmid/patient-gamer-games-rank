@@ -1,4 +1,4 @@
-import { worthScore, dealScore, dadScore, multiplayerScore, typicalPrice, isOnline } from "./score.js";
+import { worthScore, dealScore, dadScore, multiplayerScore, typicalPrice, isOnline, isPatient, launchTrend, fmtN } from "./score.js";
 
 const form = document.getElementById("filters");
 const list = document.getElementById("list");
@@ -30,18 +30,17 @@ function pricePoints(appid) {
 const games = data.games.map((g) => {
   const pts = pricePoints(g.appid);
   g = { ...g, pts, typical: typicalPrice(pts, end) };
-  return { ...g, worth: worthScore(g), deal: dealScore(g), dad: dadScore(g), mp: multiplayerScore(g) };
+  return { ...g, patient: isPatient(g), worth: worthScore(g), deal: dealScore(g), dad: dadScore(g), mp: multiplayerScore(g) };
 });
 
-// Banner: covers of the 16 best "Worth it" games, and what the data covers.
-document.getElementById("hero-art").innerHTML = [...games].sort((a, b) => b.worth.score - a.worth.score).slice(0, 16)
+// Banner: covers of the 16 best "Worth the wait" patient games, and what the data covers.
+document.getElementById("hero-art").innerHTML = games.filter((g) => g.patient).sort((a, b) => b.worth.score - a.worth.score).slice(0, 16)
   .map((g) => `<img alt="" src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg" />`).join("");
 const atLow = (g) => g.price > 0 && g.lowest != null && g.price <= g.lowest;
 function renderStats() {
   const wishLow = games.filter((g) => mine[g.appid] === "wish" && atLow(g)).length;
   document.getElementById("stats").innerHTML = [
-    `<b>${games.length.toLocaleString("en")}</b> games`,
-    `<b>4</b> scores`,
+    `<b>${games.filter((g) => g.patient).length.toLocaleString("en")}</b> patient games`,
     `<b>${games.filter(atLow).length.toLocaleString("en")}</b> at their all-time low`,
     wishLow && `<b>${wishLow}</b> from your wishlist at their low`,
     `updated <b>${data.updated}</b>`,
@@ -59,7 +58,7 @@ for (const [k, v] of params) if (form[k]) form[k].value = v;
 // A hash value with no matching chip (e.g. an old link) leaves its group empty; fall back to the first chip.
 for (const g of document.querySelectorAll(".group, #rank-tabs")) if (!g.querySelector(":checked")) g.querySelector("input").checked = true;
 
-// Ties fall back to "Worth it", so equally cheap games still rank by quality.
+// Ties fall back to "Worth the wait", so equally cheap games still rank by quality.
 const sortKey = {
   worth: (g) => g.worth.score,
   deal: (g) => (g.deal?.score ?? -1) * 1000 + g.worth.score, // free games last
@@ -67,13 +66,13 @@ const sortKey = {
   mp: (g) => g.mp.score,
 };
 
-function bar(label, s, none) {
-  if (!s) return `<div class="score none"><span>${label}</span><span>${none}</span></div>`;
+function bar(label, s, none, cls = "") {
+  if (!s) return `<div class="score none ${cls}"><span>${label}</span><span>${none}</span></div>`;
   const { score, parts } = s;
   const rows = Object.entries(parts)
     .map(([k, [v, why]]) => `<li class="${v ? "" : "zero"}"><span>${k} <small>${esc(why)}</small></span><span>${v > 0 ? "+" : ""}${Math.round(v)}</span></li>`)
     .join("");
-  return `<details class="score"><summary><span>${label}</span><span class="bar"><i class="${score >= 70 ? "hi" : score >= 40 ? "ok" : ""}" style="width:${score}%"></i></span><b>${score}</b></summary><ul>${rows}</ul></details>`;
+  return `<details class="score ${cls}"><summary><span>${label}</span><span class="bar"><i class="${score >= 70 ? "hi" : score >= 40 ? "ok" : ""}" style="width:${score}%"></i></span><b>${score}</b></summary><ul>${rows}</ul></details>`;
 }
 
 // Step chart of the price since tracking began, extended to the data's date.
@@ -106,11 +105,26 @@ function inYears(released, range) {
   return (from == null || y >= from) && (to == null || y <= to);
 }
 
-function priceChip(g) {
-  if (!g.price) return "Free";
+// The patient gamer's four numbers, big: how good it is now, whether it got
+// better since launch, what it costs, and how far that is from its best price.
+function kpis(g) {
+  const tile = (label, value, sub, cls = "") => `<div class="kpi ${cls}"><span>${label}</span><b>${value}</b><small>${sub}</small></div>`;
+  const recent = g.recentReviews >= 50;
+  const pct = recent ? g.recentPct : g.steamPct, n = recent ? g.recentReviews : g.steamReviews;
+  const trend = launchTrend(g);
   const off = g.regularPrice > g.price ? Math.round((1 - g.price / g.regularPrice) * 100) : 0;
-  const low = g.lowest == null ? "" : g.price > g.lowest ? ` · low $${g.lowest}` : " · all-time low";
-  return `$${g.price}${off >= 5 ? ` −${off}%` : ""}${low}`;
+  return `<div class="kpis">
+    ${tile("Reviews now", `${pct}%`, `${fmtN(n)} ${recent ? "in 6 months" : "all time"}`, pct >= 90 ? "good" : pct < 75 ? "bad" : "")}
+    ${trend == null
+      ? tile("Since launch", "–", g.launchPct == null ? "no data yet" : "too new")
+      : tile("Since launch", `${trend > 0 ? "+" : ""}${trend}`, `${g.launchPct}% → ${g.recentPct}%`, trend >= 3 ? "good" : trend <= -5 ? "bad" : "")}
+    ${tile("Price", g.price ? `$${g.price}` : "Free", off >= 5 ? `−${off}% of $${g.regularPrice}` : g.price ? "full price" : "free to play", off >= 50 ? "good" : "")}
+    ${g.lowest == null || !g.price
+      ? tile("All-time low", "–", "unknown")
+      : g.price <= g.lowest
+        ? tile("All-time low", "At low", `$${g.lowest}`, "good")
+        : tile("All-time low", `+$${(g.price - g.lowest).toFixed(2)}`, `low $${g.lowest}`)}
+  </div>`;
 }
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -128,7 +142,7 @@ function render() {
       && (!f.play || (f.play === "single" ? g.singleplayer : f.play === "coop" ? g.onlineCoop : g.onlinePvp))
       && (!f.deal || (f.deal === "sale" ? g.regularPrice > g.price * 1.05 : g.price > 0 && g.lowest != null && g.price <= g.lowest))
       && (!f.year || inYears(g.released, f.year))
-      && (!f.show || !(g.earlyAccess || g.liveService))
+      && (f.show === "all" || g.patient)
       && (!f.mine || (f.mine === "open" ? !["own", "played", "skip"].includes(mine[g.appid]) : mine[g.appid] === f.mine))
       && (!f.deck || g.deck === "verified" || (f.deck === "playable" && g.deck === "playable"))
       && (f.price === "" || g.price <= Number(f.price))
@@ -136,7 +150,7 @@ function render() {
     .sort((a, b) => sortKey[f.sort](b) - sortKey[f.sort](a));
 
   renderStats();
-  count.textContent = `${shown.length} of ${games.length} games`;
+  count.textContent = f.show === "all" ? `${shown.length} of ${games.length} games` : `${shown.length} patient games`;
   more.hidden = shown.length <= limit;
   list.innerHTML = shown.slice(0, limit).map((g) => `
     <li class="${mine[g.appid] === "skip" ? "skipped" : ""}">
@@ -147,22 +161,24 @@ function render() {
         <h2><a href="https://store.steampowered.com/app/${g.appid}/">${esc(g.title)}</a></h2>
         <ul class="chips">
           <li>${g.released.slice(0, 4)}</li>
-          <li class="${g.price && g.lowest != null && g.price <= g.lowest ? "good" : ""}">${priceChip(g)}</li>
           <li>${g.hltbId ? `<a href="https://howlongtobeat.com/game/${g.hltbId}">${g.hours}h</a>` : "? h"}</li>
           ${g.metacriticUrl ? `<li><a href="${esc(g.metacriticUrl)}">Metascore ${g.metascore}</a></li>` : ""}
-          <li>Steam ${g.steamPct}%</li>
           ${g.earlyAccess ? `<li class="warn">Early Access</li>` : ""}
+          ${g.liveService ? `<li class="warn">Live service</li>` : ""}
           ${isOnline(g) ? `<li>${g.singleplayer === false ? "Online only: " : ""}${[g.onlineCoop && "Online co-op", g.onlinePvp && "PvP", g.mmo && "MMO"].filter(Boolean).join(" · ")}</li>` : ""}
           <li class="${g.deck === "verified" ? "good" : ""}">Deck ${g.deck}</li>
           ${(g.tags ?? []).map((t) => `<li class="tag"><button type="button" data-tag="${esc(t)}">${esc(t)}</button></li>`).join("")}
         </ul>
+        ${kpis(g)}
+        ${bar("Worth the wait", g.worth, "", "primary")}
+        ${bar("Buy now", g.deal, "free to play", "primary")}
+        ${priceChart(g)}
         <div class="mine" data-appid="${g.appid}">${Object.entries(STATUSES).map(([k, t]) =>
           `<button type="button" data-status="${k}" aria-pressed="${mine[g.appid] === k}">${t}</button>`).join("")}</div>
-        ${priceChart(g)}
-        ${bar("Worth it", g.worth)}
-        ${bar("Buy now", g.deal, "free to play")}
-        ${bar("Gamer Dad", g.dad)}
-        ${g.mp ? bar("Multiplayer", g.mp) : ""}
+        <div class="lenses">
+          ${bar("Gamer Dad", g.dad, "", "minor")}
+          ${g.mp ? bar("Multiplayer", g.mp, "", "minor") : ""}
+        </div>
       </div>
     </li>`).join("");
 }

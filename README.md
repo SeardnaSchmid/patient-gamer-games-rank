@@ -1,11 +1,13 @@
 # Patient Gamers Rank
 
-A static page that ranks games by two scores:
+A static page that ranks games for patient gamers. Two scores answer the patient gamer's two questions, two more are separate lenses:
 
-- **Patient Gamer**: is it worth buying now? Rewards age, a low sale price, quality, complete editions, and games that improved after launch.
-- **Gamer Dad**: does it fit a busy schedule? Rewards a short main story, quality, short-session play, and handheld support.
+- **Worth it**: is the game good and finished today? Quality from the last 6 months of Steam reviews, how reviews moved since the launch quarter (was it fixed?), out a year and not Early Access or live service, Metascore.
+- **Buy now**: is today the moment? Discount off the list price, distance to the all-time low, and, once 30 days are tracked, whether the price is below what the game usually costs.
+- **Gamer Dad**: does it fit a busy schedule? Short main story, quality, Steam Deck, controller, cloud saves, "Save Anytime".
+- **Multiplayer** (online games only): is the community still there? Players, review activity now vs. half a year ago, quality, recent developer announcements.
 
-You can filter by Steam Deck status, max price and max hours. The filters are stored in the URL hash, so you can share a link to a filtered ranking. Click a score to see how it was calculated.
+The rules and weights are in `score.js` and on the page under "How the scores work". You can filter by genre, Steam Deck status, max price and max hours. The filters are stored in the URL hash, so you can share a link to a filtered ranking. Click a score to see how it was calculated.
 
 ## Data
 
@@ -13,8 +15,10 @@ Every value a score uses is fetched, not typed in. `scripts/fetch.mjs` takes eve
 
 | Value | Source |
 |---|---|
-| Release date, Metascore, controller support, Steam Cloud, "Save Anytime", free-to-play/in-app purchases | Steam store API (`appdetails`) |
-| % positive reviews, Steam price | SteamSpy |
+| Release date, Metascore, controller support, Steam Cloud, "Save Anytime", free-to-play/in-app purchases, Early Access, single-player/online co-op/PvP/MMO | Steam store API (`appdetails`) |
+| % positive reviews, Steam price and list price, peak players yesterday | SteamSpy |
+| % positive at launch and in the last 6 months, review activity (refreshed monthly) | Steam review histogram |
+| Date of the last developer announcement (refreshed monthly) | Steam news API |
 | Steam Deck Verified / Playable | Steam Deck compatibility report |
 | Best current price across stores, all-time low (USD) | [CheapShark API](https://apidocs.cheapshark.com/) |
 | Genre tags (top 4, minus mood tags like "Indie") | SteamSpy |

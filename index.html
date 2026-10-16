@@ -18,6 +18,7 @@
   --chip: #efede8;
   --good: #2f7d4f;
   --good-bg: #e2f2e8;
+  --warn-bg: #f7ecd2;
   --ok: #c9962a;
   --low: #c0563f;
 }
@@ -32,6 +33,7 @@
     --chip: #2a2a2f;
     --good: #6fcf97;
     --good-bg: #1f3a2b;
+    --warn-bg: #3a3220;
     --ok: #e0b54a;
     --low: #e07a63;
   }
@@ -160,6 +162,7 @@ h2 { margin: 0; font-size: 1.1rem; line-height: 1.3; }
   white-space: nowrap;
 }
 .chips li.good { background: var(--good-bg); color: var(--good); }
+.chips li.warn { background: var(--warn-bg); color: var(--ok); }
 .chips a { color: inherit; }
 
 .score summary {
@@ -176,6 +179,7 @@ h2 { margin: 0; font-size: 1.1rem; line-height: 1.3; }
 .bar i { display: block; height: 100%; border-radius: 4px; background: var(--low); }
 .bar i.ok { background: var(--ok); }
 .bar i.hi { background: var(--good); }
+.score.none { display: grid; grid-template-columns: 100px 1fr; gap: 10px; font-size: 0.85rem; color: var(--muted); }
 .score b { text-align: right; font-variant-numeric: tabular-nums; }
 .score ul { margin: 4px 0 8px; padding: 0; list-style: none; font-size: 0.8rem; color: var(--muted); max-width: 440px; }
 .score li { display: flex; justify-content: space-between; gap: 12px; }
@@ -225,7 +229,7 @@ h2 a { color: inherit; }
     <form id="filters" onsubmit="return false">
       <input type="search" name="q" placeholder="Search games…" aria-label="Search games" />
       <div class="groups">
-        <div class="group" role="radiogroup" aria-label="Rank by"><span class="label">Rank by</span><label><input type="radio" name="sort" value="both" checked /><span>Both</span></label><label><input type="radio" name="sort" value="patient" /><span>Patient Gamer</span></label><label><input type="radio" name="sort" value="dad" /><span>Gamer Dad</span></label></div>
+        <div class="group" role="radiogroup" aria-label="Rank by"><span class="label">Rank by</span><label><input type="radio" name="sort" value="worth" checked /><span>Worth it</span></label><label><input type="radio" name="sort" value="deal" /><span>Buy now</span></label><label><input type="radio" name="sort" value="dad" /><span>Gamer Dad</span></label><label><input type="radio" name="sort" value="mp" /><span>Multiplayer</span></label></div>
         <div class="group" role="radiogroup" aria-label="Price"><span class="label">Price</span><label><input type="radio" name="price" value="" checked /><span>Any</span></label><label><input type="radio" name="price" value="0" /><span>Free</span></label><label><input type="radio" name="price" value="5" /><span>≤ $5</span></label><label><input type="radio" name="price" value="10" /><span>≤ $10</span></label><label><input type="radio" name="price" value="20" /><span>≤ $20</span></label></div>
         <div class="group" role="radiogroup" aria-label="Length"><span class="label">Length</span><label><input type="radio" name="hours" value="" checked /><span>Any</span></label><label><input type="radio" name="hours" value="5" /><span>≤ 5h</span></label><label><input type="radio" name="hours" value="10" /><span>≤ 10h</span></label><label><input type="radio" name="hours" value="20" /><span>≤ 20h</span></label><label><input type="radio" name="hours" value="40" /><span>≤ 40h</span></label></div>
         <label class="group"><span class="label">Genre</span><select name="genre"><option value="">Any</option></select></label>
@@ -241,8 +245,10 @@ h2 a { color: inherit; }
       <p>Data from <a href="https://store.steampowered.com/">Steam</a> (price, Metascore, reviews, Deck status, features), <a href="https://www.cheapshark.com/">CheapShark</a> (best price and all-time low) and <a href="https://howlongtobeat.com/">HowLongToBeat</a> (playtime). Updated <span id="updated"></span>.</p>
       <details>
         <summary>How the scores work</summary>
-        <p><b>Patient Gamer</b> (0–100): 25 for 2+ years since release, 25 for a current price of $10 or less, 15 if today's price is at the all-time low, 25 for quality (Metascore and Steam % positive averaged), 5 if Steam players rate it higher than critics, 5 for a complete/definitive edition, −15 for live service.</p>
-        <p><b>Gamer Dad</b> (0–100): 30 for a main story of 10 hours or less, 25 for quality, 15 for Steam Deck Verified (8 for Playable), 10 for full controller support (5 partial), 10 for Steam Cloud saves, 10 for the Steam "Save Anytime" tag, −20 for live service.</p>
+        <p><b>Worth it</b> (0–100), is it good and finished today? 50 for quality now (Steam reviews of the last 6 months, adjusted for how many there are), 25 for how reviews moved since the launch quarter (held up 15, fixed since launch 25), 15 for being out a year and not Early Access or live service, 10 for the Metascore.</p>
+        <p><b>Buy now</b> (0–100), is today the moment? 40 for the discount off Steam's list price (75 % off or more), 40 for being at the all-time low (CheapShark), 20 for being below the price the game usually sits at. That last part needs 30 days of price history tracked here; until then the other two count 50 each. Free games have no deal score.</p>
+        <p><b>Gamer Dad</b> (0–100), does it fit a busy schedule? 30 for a main story of 10 hours or less, 25 for quality now, 15 for Steam Deck Verified (8 for Playable), 10 for full controller support (5 partial), 10 for Steam Cloud saves, 10 for the Steam "Save Anytime" tag, −20 for live service.</p>
+        <p><b>Multiplayer</b> (0–100, games with online play only), is the community still there? 35 for players (log scale, 10k peak a day is full), 25 for review activity in the last 6 months compared with the 6 before, 25 for quality now, 15 for an announcement from the developers within the last 3 months.</p>
         <p>Prices are US dollars, the cheapest offer across stores. Click a score to see each value it's based on.</p>
       </details>
     </footer>

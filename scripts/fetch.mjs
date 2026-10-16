@@ -8,17 +8,21 @@
 //              HowLongToBeat main-story hours (unofficial site API, may break).
 //              At most LIMIT games get these per run, so the catalogue fills
 //              up over several runs instead of hammering the APIs.
+// Monthly      Steam review histogram (positive % at launch, in the last 6
+//              months, review activity) and the last Steam announcement.
+//              Refreshed after 30 days, at most MONTHLY_LIMIT games per run.
 // Prices       CheapShark, 25 games per request, every run: best current price
 //              across stores and the all-time low.
 // A lookup that fails keeps the game's previous value. Progress is saved every
 // 50 games, so the script can be stopped and restarted.
-// Env: LIMIT, MAX_MINUTES, REFRESH_DAYS (0 = refetch every game).
+// Env: LIMIT, MAX_MINUTES, REFRESH_DAYS (0 = refetch every game), MONTHLY_LIMIT.
 import { readFileSync, writeFileSync } from "node:fs";
 
 const MIN_REVIEWS = 1000;
 const MIN_PCT = 75;
 const LIMIT = Number(process.env.LIMIT ?? 300);
 const REFRESH_DAYS = Number(process.env.REFRESH_DAYS ?? 90);
+const MONTHLY_LIMIT = Number(process.env.MONTHLY_LIMIT ?? 1500);
 // Stop fetching details after this many minutes so prices and the final save
 // still fit in a GitHub Actions job (6 h max).
 const DEADLINE = Date.now() + Number(process.env.MAX_MINUTES ?? 1e6) * 60_000;
@@ -52,6 +56,8 @@ async function candidatePage(page) {
     steamPct: Math.round((g.positive / (g.positive + g.negative)) * 100),
     steamReviews: g.positive + g.negative,
     steamPrice: Number(g.price) / 100,
+    regularPrice: Number(g.initialprice) / 100, // Steam list price, for the discount
+    ccu: g.ccu, // peak concurrent players yesterday
   }));
   return { good, more: all.length === 1000 && good.length >= 20 };
 }
@@ -76,6 +82,11 @@ async function steam(appid) {
     saveAnytime: cats.has("Save Anytime"),
     // Free-to-play with in-app purchases, or an MMO: a game that never ends by design.
     liveService: (g.is_free && cats.has("In-App Purchases")) || cats.has("MMO") || genres.has("Massively Multiplayer"),
+    earlyAccess: genres.has("Early Access"),
+    singleplayer: cats.has("Single-player"),
+    onlineCoop: cats.has("Online Co-op"),
+    onlinePvp: cats.has("Online PvP"),
+    mmo: cats.has("MMO") || genres.has("Massively Multiplayer"),
   };
 }
 
@@ -99,6 +110,29 @@ const DECK = { 3: "verified", 2: "playable", 1: "unsupported" };
 async function deck(appid) {
   const r = await json(`https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport?nAppID=${appid}`);
   return { deck: DECK[r.results?.resolved_category] ?? "unknown" };
+}
+
+// Steam's review histogram: up/down votes per month (per week for young games)
+// since launch. Gives "was it fixed?" on one scale, and review activity as a
+// stand-in for how alive a game still is.
+const DAY = 864e5;
+async function reviewHistory(appid) {
+  const r = (await json(`https://store.steampowered.com/appreviewhistogram/${appid}?l=english&review_score_preference=0`)).results;
+  const rows = r.rollups.map((x) => ({ t: x.date * 1000, up: x.recommendations_up, down: x.recommendations_down }));
+  const sum = (from, to) => rows.filter((x) => x.t >= from && x.t < to).reduce((a, x) => ({ up: a.up + x.up, down: a.down + x.down }), { up: 0, down: 0 });
+  const pct = ({ up, down }) => (up + down ? Math.round((up / (up + down)) * 100) : null);
+  const start = rows[0]?.t ?? Date.now(), now = Date.now();
+  const launch = sum(start, start + 90 * DAY), recent = sum(now - 182 * DAY, now + DAY), prev = sum(now - 365 * DAY, now - 182 * DAY);
+  return {
+    launchPct: pct(launch), launchReviews: launch.up + launch.down,
+    recentPct: pct(recent), recentReviews: recent.up + recent.down,
+    prevReviews: prev.up + prev.down,
+  };
+}
+
+async function lastNews(appid) {
+  const [item] = (await json(`https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appid}&count=1&feeds=steam_community_announcements`)).appnews.newsitems;
+  return { lastNews: item ? new Date(item.date * 1000).toISOString().slice(0, 10) : null };
 }
 
 async function cheapsharkId(appid) {
@@ -198,7 +232,8 @@ function save(final) {
   const done = [...games.values()].filter((g) => g.fetched && g.released && (!final || candidates.has(g.appid)));
   for (const g of done) {
     g.price ??= g.steamPrice;
-    g.lowest = Math.min(g.lowest ?? g.price, g.price);
+    // Unknown stays unknown (null): faking it with today's price would read as "at the all-time low".
+    g.lowest = g.lowest == null ? null : Math.min(g.lowest, g.price);
   }
   const lines = done.sort((a, b) => b.steamReviews - a.steamReviews).map((g) => " " + JSON.stringify(g));
   writeFileSync("games.json", `{"updated":"${today}","skipped":${JSON.stringify([...skipped].sort((a, b) => a - b))},"games":[\n${lines.join(",\n")}\n]}\n`);
@@ -218,7 +253,8 @@ function next() {
   return best;
 }
 
-let n = 0;
+const monthlyDue = (g) => !g.monthly || (Date.now() - new Date(g.monthly)) / DAY > 30;
+let n = 0, monthly = 0;
 while (n < LIMIT && Date.now() < DEADLINE) {
   const game = next();
   if (!game) {
@@ -235,15 +271,20 @@ while (n < LIMIT && Date.now() < DEADLINE) {
   } catch (e) { console.warn(`  steam ${game.appid}: ${e.message}`); await sleep(1500); continue; }
   // The other sources run side by side while Steam's rate limit (~200 appdetails
   // per 5 minutes) makes us wait anyway. A miss keeps the previous value.
-  const results = await Promise.allSettled([
-    deck(game.appid), tags(game.appid), cheapsharkId(game.appid), hltb(game.title, Number(game.released?.slice(0, 4))),
-  ]);
-  results.forEach((r, i) => r.status === "fulfilled" ? Object.assign(game, r.value) : console.warn(`  ${["deck", "tags", "cheapshark", "hltb"][i]} ${game.title}: ${r.reason.message}`));
+  const sources = { deck: deck(game.appid), tags: tags(game.appid), cheapshark: cheapsharkId(game.appid), hltb: hltb(game.title, Number(game.released?.slice(0, 4))) };
+  const doMonthly = monthlyDue(game) && monthly < MONTHLY_LIMIT;
+  if (doMonthly) Object.assign(sources, { reviews: reviewHistory(game.appid), news: lastNews(game.appid) });
+  const results = await Promise.allSettled(Object.values(sources));
+  const names = Object.keys(sources);
+  results.forEach((r, i) => r.status === "fulfilled" ? Object.assign(game, r.value) : console.warn(`  ${names[i]} ${game.title}: ${r.reason.message}`));
+  // Mark the monthly values fresh once the histogram came back; otherwise retry next run.
+  // (The news API refuses some apps for good, so it doesn't hold this up.)
+  if (doMonthly && results.at(-2).status === "fulfilled") { game.monthly = today; monthly++; }
   if (game.software) { skipped.add(game.appid); candidates.delete(game.appid); games.delete(game.appid); continue; }
   delete game.software;
   game.deck ??= "unknown";
   game.fetched = today;
-  console.log(`${++n} ${game.title} · MC ${game.metascore} · ${game.steamPct}% · ${game.hours}h · deck ${game.deck} · ${game.tags?.join(", ")}`);
+  console.log(`${++n} ${game.title} · MC ${game.metascore} · ${game.steamPct}% (launch ${game.launchPct}%, recent ${game.recentPct}%) · ${game.hours}h · deck ${game.deck} · ${game.tags?.join(", ")}`);
   if (n % 50 === 0) save(false);
   await sleep(Math.max(0, 1500 - (Date.now() - started)));
 }

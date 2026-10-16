@@ -90,7 +90,24 @@ h2 { margin: 0; font-size: 1.1rem; }
 .score meter { width: 100%; height: 10px; }
 .score b { text-align: right; }
 .score ul { margin: 4px 0 8px 120px; padding: 0; list-style: none; font-size: 0.85rem; color: var(--muted); max-width: 260px; }
-.score li { display: flex; justify-content: space-between; }
+.score ul { max-width: 420px; }
+.score li { display: flex; justify-content: space-between; gap: 12px; }
+.score li.zero { opacity: 0.55; }
+.score small { opacity: 0.8; }
+#more {
+  display: block;
+  margin: 16px auto;
+  padding: 8px 20px;
+  font: inherit;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h2 a { color: inherit; }
 
 @media (max-width: 480px) {
   #list > li { padding-left: 44px; }
@@ -109,7 +126,13 @@ h2 { margin: 0; font-size: 1.1rem; }
 
     <form id="filters" onsubmit="return false">
       <label>Search <input type="search" name="q" placeholder="Title" /></label>
-      <label>Platform <select name="platform"><option value="">All</option></select></label>
+      <label>Steam Deck
+        <select name="deck">
+          <option value="">Any</option>
+          <option value="playable">Playable or better</option>
+          <option value="verified">Verified only</option>
+        </select>
+      </label>
       <label>Max price <output name="priceOut"></output><input type="range" name="price" min="0" max="70" step="5" value="70" /></label>
       <label>Max hours <output name="hoursOut"></output><input type="range" name="hours" min="5" max="100" step="5" value="100" /></label>
       <label>Sort by
@@ -123,13 +146,15 @@ h2 { margin: 0; font-size: 1.1rem; }
 
     <p id="count" aria-live="polite"></p>
     <ol id="list"></ol>
+    <button id="more" type="button" hidden>Show more</button>
 
     <footer>
+      <p>Data from <a href="https://store.steampowered.com/">Steam</a> (price, Metascore, reviews, Deck status, features), <a href="https://www.cheapshark.com/">CheapShark</a> (best price and all-time low) and <a href="https://howlongtobeat.com/">HowLongToBeat</a> (playtime). Updated <span id="updated"></span>.</p>
       <details>
         <summary>How the scores work</summary>
-        <p><b>Patient Gamer</b> (0–100): 35 for being 2+ years old, 30 for a sale price of $10 or less, 20 for quality (average of critic and user score), 5 if users rate it higher than critics did at launch, 10 for a complete edition, −15 for live service.</p>
-        <p><b>Gamer Dad</b> (0–100): 35 for a main story of 10 hours or less, 30 for quality, 20 if it works in short sessions, 15 for handheld (Switch / Steam Deck), −20 for live service.</p>
-        <p>The scores, prices and playtimes are rough figures entered by hand. Check current prices before you buy.</p>
+        <p><b>Patient Gamer</b> (0–100): 25 for 2+ years since release, 25 for a current price of $10 or less, 15 if today's price is at the all-time low, 25 for quality (Metascore and Steam % positive averaged), 5 if Steam players rate it higher than critics, 5 for a complete/definitive edition, −15 for live service.</p>
+        <p><b>Gamer Dad</b> (0–100): 30 for a main story of 10 hours or less, 25 for quality, 15 for Steam Deck Verified (8 for Playable), 10 for full controller support (5 partial), 10 for Steam Cloud saves, 10 for the Steam "Save Anytime" tag, −20 for live service.</p>
+        <p>Prices are US dollars, the cheapest offer across stores. Click a score to see each value it's based on.</p>
       </details>
     </footer>
   </body>

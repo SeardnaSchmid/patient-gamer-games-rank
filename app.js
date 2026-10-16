@@ -3,14 +3,17 @@ import { patientScore, dadScore } from "./score.js";
 const form = document.getElementById("filters");
 const list = document.getElementById("list");
 const count = document.getElementById("count");
+const more = document.getElementById("more");
+const PAGE = 100;
+let limit = PAGE;
 
-const games = (await (await fetch("games.json")).json()).map((g) => ({
+const data = await (await fetch("games.json")).json();
+document.getElementById("updated").textContent = data.updated;
+const games = data.games.map((g) => ({
   ...g,
   patient: patientScore(g),
   dad: dadScore(g),
 }));
-
-for (const p of [...new Set(games.flatMap((g) => g.platforms))].sort()) form.platform.add(new Option(p, p));
 
 // Filters live in the URL hash so a ranking can be shared as a link.
 const params = new URLSearchParams(location.hash.slice(1));
@@ -20,8 +23,7 @@ const sortKey = { patient: (g) => g.patient.score, dad: (g) => g.dad.score, both
 
 function bar(label, { score, parts }) {
   const rows = Object.entries(parts)
-    .filter(([, v]) => v)
-    .map(([k, v]) => `<li><span>${k}</span><span>${v > 0 ? "+" : ""}${Math.round(v)}</span></li>`)
+    .map(([k, [v, why]]) => `<li class="${v ? "" : "zero"}"><span>${k} <small>${esc(why)}</small></span><span>${v > 0 ? "+" : ""}${Math.round(v)}</span></li>`)
     .join("");
   return `<details class="score"><summary><span>${label}</span><meter min="0" max="100" low="40" high="70" optimum="100" value="${score}"></meter><b>${score}</b></summary><ul>${rows}</ul></details>`;
 }
@@ -37,20 +39,29 @@ function render() {
   const q = f.q.trim().toLowerCase();
   const shown = games
     .filter((g) => (!q || g.title.toLowerCase().includes(q))
-      && (!f.platform || g.platforms.includes(f.platform))
+      && (!f.deck || g.deck === "verified" || (f.deck === "playable" && g.deck === "playable"))
       && (f.price == 70 || g.price <= f.price)
-      && (f.hours == 100 || g.hours <= f.hours))
+      && (f.hours == 100 || (g.hours != null && g.hours <= f.hours)))
     .sort((a, b) => sortKey[f.sort](b) - sortKey[f.sort](a));
 
   count.textContent = `${shown.length} of ${games.length} games`;
-  list.innerHTML = shown.map((g) => `
+  more.hidden = shown.length <= limit;
+  list.innerHTML = shown.slice(0, limit).map((g) => `
     <li>
-      <h2>${esc(g.title)}</h2>
-      <p class="meta">${g.released.slice(0, 4)} · ${g.platforms.join(", ")} · ~$${g.price} · ${g.hours}h · Metascore ${g.meta}${g.user != null ? ` · User ${g.user}` : ""}</p>
+      <h2><a href="https://store.steampowered.com/app/${g.appid}/">${esc(g.title)}</a></h2>
+      <p class="meta">
+        ${g.released.slice(0, 4)}
+        · $${g.price}${g.price > g.lowest ? ` (low $${g.lowest})` : g.price ? " (all-time low)" : " (free)"}
+        · ${g.hltbId ? `<a href="https://howlongtobeat.com/game/${g.hltbId}">${g.hours}h</a>` : "? h"}
+        · ${g.metacriticUrl ? `<a href="${esc(g.metacriticUrl)}">Metascore ${g.metascore}</a>` : "no Metascore"}
+        · Steam ${g.steamPct}%
+        · Deck ${g.deck}
+      </p>
       ${bar("Patient Gamer", g.patient)}
       ${bar("Gamer Dad", g.dad)}
     </li>`).join("");
 }
 
-form.addEventListener("input", render);
+form.addEventListener("input", () => { limit = PAGE; render(); });
+more.addEventListener("click", () => { limit += PAGE; render(); });
 render();

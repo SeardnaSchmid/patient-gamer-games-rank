@@ -26,6 +26,16 @@ const games = data.games.map((g) => {
   return { ...g, worth: worthScore(g), deal: dealScore(g), dad: dadScore(g), mp: multiplayerScore(g) };
 });
 
+// Banner: covers of the 16 best "Worth it" games, and what the data covers.
+document.getElementById("hero-art").innerHTML = [...games].sort((a, b) => b.worth.score - a.worth.score).slice(0, 16)
+  .map((g) => `<img alt="" src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg" />`).join("");
+document.getElementById("stats").innerHTML = [
+  `<b>${games.length.toLocaleString("en")}</b> games`,
+  `<b>4</b> scores`,
+  `<b>${games.filter((g) => g.price > 0 && g.lowest != null && g.price <= g.lowest).length.toLocaleString("en")}</b> at their all-time low`,
+  `updated <b>${data.updated}</b>`,
+].map((s) => `<span>${s}</span>`).join("");
+
 // Genre list: every tag, most common first.
 const tagCount = new Map();
 for (const g of games) for (const t of g.tags ?? []) tagCount.set(t, (tagCount.get(t) ?? 0) + 1);

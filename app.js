@@ -9,7 +9,7 @@ let limit = PAGE;
 
 // My games: a status per game, kept in this browser only.
 const STATUS_KEY = "pgr.status.v1";
-const STATUSES = { wish: ["♥", "Wishlist"], own: ["✓", "Owned"] };
+const STATUSES = { own: ["✓", "Owned"] };
 let mine = {};
 try { mine = JSON.parse(localStorage.getItem(STATUS_KEY)) ?? {}; } catch {}
 const saveMine = () => { try { localStorage.setItem(STATUS_KEY, JSON.stringify(mine)); } catch {} };
@@ -38,11 +38,9 @@ document.getElementById("hero-art").innerHTML = games.filter((g) => g.patient).s
   .map((g) => `<img alt="" src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg" />`).join("");
 const atLow = (g) => g.price > 0 && g.lowest != null && g.price <= g.lowest;
 function renderStats() {
-  const wishLow = games.filter((g) => mine[g.appid] === "wish" && atLow(g)).length;
   document.getElementById("stats").innerHTML = [
     `<b>${games.filter((g) => g.patient).length.toLocaleString("en")}</b> patient games`,
     `<b>${games.filter(atLow).length.toLocaleString("en")}</b> at their all-time low`,
-    wishLow && `<b>${wishLow}</b> from your wishlist at their low`,
     `updated <b>${data.updated}</b>`,
   ].filter(Boolean).map((s) => `<span>${s}</span>`).join("");
 }

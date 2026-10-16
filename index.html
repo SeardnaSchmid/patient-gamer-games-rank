@@ -210,7 +210,7 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
 .score.minor .bar { height: 5px; }
 .score.minor ul { grid-column: 1 / -1; }
 @media (max-width: 560px) { .lenses { grid-template-columns: 1fr; } }
-/* Wishlist / owned: two round icon buttons on the cover's top-right corner. */
+/* Owned: a round icon button on the cover's top-right corner. */
 .cover a { display: block; height: 100%; }
 .mine { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
 .mine button {
@@ -227,7 +227,6 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
   backdrop-filter: blur(4px);
 }
 .mine button:hover { background: rgb(0 0 0 / 0.8); color: #fff; }
-.mine button[data-status="wish"][aria-pressed="true"] { background: #e0567a; color: #fff; }
 .mine button[data-status="own"][aria-pressed="true"] { background: var(--good); color: #fff; }
 .mine button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .chips button {
@@ -390,7 +389,7 @@ h2 a { color: inherit; }
       <div class="groups">
         <button type="reset" class="reset">Reset filters</button>
         <label class="group"><span class="label">Genre</span><select name="genre"><option value="">Any</option></select></label>
-        <div class="group" role="radiogroup" aria-label="My games"><span class="label">My games</span><label><input type="radio" name="mine" value="" checked /><span>All</span></label><label><input type="radio" name="mine" value="open" /><span>Not owned</span></label><label><input type="radio" name="mine" value="wish" /><span>Wishlist</span></label><label><input type="radio" name="mine" value="own" /><span>Owned</span></label></div>
+        <div class="group" role="radiogroup" aria-label="My games"><span class="label">My games</span><label><input type="radio" name="mine" value="" checked /><span>All</span></label><label><input type="radio" name="mine" value="open" /><span>Not owned</span></label><label><input type="radio" name="mine" value="own" /><span>Owned</span></label></div>
         <div class="group" role="radiogroup" aria-label="Play"><span class="label">Play</span><label><input type="radio" name="play" value="" checked /><span>Any</span></label><label><input type="radio" name="play" value="single" /><span>Single-player</span></label><label><input type="radio" name="play" value="coop" /><span>Online co-op</span></label><label><input type="radio" name="play" value="pvp" /><span>PvP</span></label></div>
         <div class="group" role="radiogroup" aria-label="Price"><span class="label">Price</span><label><input type="radio" name="price" value="" checked /><span>Any</span></label><label><input type="radio" name="price" value="0" /><span>Free</span></label><label><input type="radio" name="price" value="5" /><span>≤ $5</span></label><label><input type="radio" name="price" value="10" /><span>≤ $10</span></label><label><input type="radio" name="price" value="20" /><span>≤ $20</span></label></div>
         <div class="group" role="radiogroup" aria-label="Deal"><span class="label">Deal</span><label><input type="radio" name="deal" value="" checked /><span>Any</span></label><label><input type="radio" name="deal" value="sale" /><span>On sale</span></label><label><input type="radio" name="deal" value="low" /><span>All-time low</span></label></div>

@@ -12,7 +12,7 @@ Two other lenses sit beside them, not in the focus:
 
 The rules and weights are in `score.js` and on the page under "How the scores work". You can filter by genre, play mode, price, deal, length, release year, Steam Deck status and Early Access/live service.
 
-**My games**: the ♥ and ✓ buttons on a cover mark a game as wishlisted or owned. The marks live in your browser's local storage (`pgr.status.v1`), with no account; they drive the "My games" filter, and the banner counts wishlist games at their all-time low. The filters are stored in the URL hash, so you can share a link to a filtered ranking. Click a score to see how it was calculated.
+**My games**: the ✓ button on a cover marks a game as owned. The marks live in your browser's local storage (`pgr.status.v1`), with no account, and drive the "My games" filter (all, not owned, owned). The filters are stored in the URL hash, so you can share a link to a filtered ranking. Click a score to see how it was calculated.
 
 ## Data
 

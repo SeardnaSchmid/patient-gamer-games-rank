@@ -7,6 +7,13 @@ const more = document.getElementById("more");
 const PAGE = 100;
 let limit = PAGE;
 
+// My games: a status per game, kept in this browser only.
+const STATUS_KEY = "pgr.status.v1";
+const STATUSES = { wish: "♡ Wishlist", own: "✓ Owned", played: "▶ Played", skip: "✕ Not for me" };
+let mine = {};
+try { mine = JSON.parse(localStorage.getItem(STATUS_KEY)) ?? {}; } catch {}
+const saveMine = () => { try { localStorage.setItem(STATUS_KEY, JSON.stringify(mine)); } catch {} };
+
 const data = await (await fetch("games.json")).json();
 // Optional: the price history carried through the data releases.
 const priceHistory = await fetch("history.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -29,12 +36,17 @@ const games = data.games.map((g) => {
 // Banner: covers of the 16 best "Worth it" games, and what the data covers.
 document.getElementById("hero-art").innerHTML = [...games].sort((a, b) => b.worth.score - a.worth.score).slice(0, 16)
   .map((g) => `<img alt="" src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg" />`).join("");
-document.getElementById("stats").innerHTML = [
-  `<b>${games.length.toLocaleString("en")}</b> games`,
-  `<b>4</b> scores`,
-  `<b>${games.filter((g) => g.price > 0 && g.lowest != null && g.price <= g.lowest).length.toLocaleString("en")}</b> at their all-time low`,
-  `updated <b>${data.updated}</b>`,
-].map((s) => `<span>${s}</span>`).join("");
+const atLow = (g) => g.price > 0 && g.lowest != null && g.price <= g.lowest;
+function renderStats() {
+  const wishLow = games.filter((g) => mine[g.appid] === "wish" && atLow(g)).length;
+  document.getElementById("stats").innerHTML = [
+    `<b>${games.length.toLocaleString("en")}</b> games`,
+    `<b>4</b> scores`,
+    `<b>${games.filter(atLow).length.toLocaleString("en")}</b> at their all-time low`,
+    wishLow && `<b>${wishLow}</b> from your wishlist at their low`,
+    `updated <b>${data.updated}</b>`,
+  ].filter(Boolean).map((s) => `<span>${s}</span>`).join("");
+}
 
 // Genre list: every tag, most common first.
 const tagCount = new Map();
@@ -117,15 +129,17 @@ function render() {
       && (!f.deal || (f.deal === "sale" ? g.regularPrice > g.price * 1.05 : g.price > 0 && g.lowest != null && g.price <= g.lowest))
       && (!f.year || inYears(g.released, f.year))
       && (!f.show || !(g.earlyAccess || g.liveService))
+      && (!f.mine || (f.mine === "open" ? !["own", "played", "skip"].includes(mine[g.appid]) : mine[g.appid] === f.mine))
       && (!f.deck || g.deck === "verified" || (f.deck === "playable" && g.deck === "playable"))
       && (f.price === "" || g.price <= Number(f.price))
       && (f.hours === "" || (g.hours != null && g.hours <= Number(f.hours))))
     .sort((a, b) => sortKey[f.sort](b) - sortKey[f.sort](a));
 
+  renderStats();
   count.textContent = `${shown.length} of ${games.length} games`;
   more.hidden = shown.length <= limit;
   list.innerHTML = shown.slice(0, limit).map((g) => `
-    <li>
+    <li class="${mine[g.appid] === "skip" ? "skipped" : ""}">
       <a class="cover" href="https://store.steampowered.com/app/${g.appid}/">
         <img loading="lazy" alt="" src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${g.appid}/header.jpg" />
       </a>
@@ -142,6 +156,8 @@ function render() {
           <li class="${g.deck === "verified" ? "good" : ""}">Deck ${g.deck}</li>
           ${(g.tags ?? []).map((t) => `<li class="tag"><button type="button" data-tag="${esc(t)}">${esc(t)}</button></li>`).join("")}
         </ul>
+        <div class="mine" data-appid="${g.appid}">${Object.entries(STATUSES).map(([k, t]) =>
+          `<button type="button" data-status="${k}" aria-pressed="${mine[g.appid] === k}">${t}</button>`).join("")}</div>
         ${priceChart(g)}
         ${bar("Worth it", g.worth)}
         ${bar("Buy now", g.deal, "free to play")}
@@ -154,6 +170,16 @@ function render() {
 form.addEventListener("input", () => { limit = PAGE; render(); });
 // "reset" fires before the fields are reset, so render on the next tick.
 form.addEventListener("reset", () => setTimeout(() => { limit = PAGE; render(); }));
+// Status buttons toggle: clicking the active one clears it.
+list.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-status]");
+  if (!btn) return;
+  const appid = btn.closest("[data-appid]").dataset.appid;
+  if (mine[appid] === btn.dataset.status) delete mine[appid];
+  else mine[appid] = btn.dataset.status;
+  saveMine();
+  render();
+});
 // Clicking a tag on a card filters by it.
 list.addEventListener("click", (e) => {
   const tag = e.target.closest("[data-tag]")?.dataset.tag;

@@ -154,6 +154,20 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
 }
 .reset:hover { text-decoration: underline; }
 .group select.set { background-color: var(--accent); color: var(--bg); font-weight: 600; }
+.mine { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
+.mine button {
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.mine button:hover { color: var(--text); border-color: var(--muted); }
+.mine button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+#list > li.skipped { opacity: 0.5; }
 .chips button {
   padding: 0 8px;
   border: 1px solid var(--line);
@@ -314,6 +328,7 @@ h2 a { color: inherit; }
       <div class="groups">
         <button type="reset" class="reset">Reset filters</button>
         <label class="group"><span class="label">Genre</span><select name="genre"><option value="">Any</option></select></label>
+        <div class="group" role="radiogroup" aria-label="My games"><span class="label">My games</span><label><input type="radio" name="mine" value="" checked /><span>All</span></label><label><input type="radio" name="mine" value="open" /><span>Not owned</span></label><label><input type="radio" name="mine" value="wish" /><span>Wishlist</span></label><label><input type="radio" name="mine" value="own" /><span>Owned</span></label><label><input type="radio" name="mine" value="played" /><span>Played</span></label></div>
         <div class="group" role="radiogroup" aria-label="Rank by"><span class="label">Rank by</span><label><input type="radio" name="sort" value="worth" checked /><span>Worth it</span></label><label><input type="radio" name="sort" value="deal" /><span>Buy now</span></label><label><input type="radio" name="sort" value="dad" /><span>Gamer Dad</span></label><label><input type="radio" name="sort" value="mp" /><span>Multiplayer</span></label></div>
         <div class="group" role="radiogroup" aria-label="Play"><span class="label">Play</span><label><input type="radio" name="play" value="" checked /><span>Any</span></label><label><input type="radio" name="play" value="single" /><span>Single-player</span></label><label><input type="radio" name="play" value="coop" /><span>Online co-op</span></label><label><input type="radio" name="play" value="pvp" /><span>PvP</span></label></div>
         <div class="group" role="radiogroup" aria-label="Price"><span class="label">Price</span><label><input type="radio" name="price" value="" checked /><span>Any</span></label><label><input type="radio" name="price" value="0" /><span>Free</span></label><label><input type="radio" name="price" value="5" /><span>≤ $5</span></label><label><input type="radio" name="price" value="10" /><span>≤ $10</span></label><label><input type="radio" name="price" value="20" /><span>≤ $20</span></label></div>

@@ -42,7 +42,7 @@
 * { box-sizing: border-box; }
 body {
   margin: 0 auto;
-  max-width: 900px;
+  max-width: 1240px;
   padding: 24px 16px 48px;
   background: var(--bg);
   color: var(--text);
@@ -209,6 +209,32 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 h2 a { color: inherit; }
 
+/* Wide screens: filters in a sticky sidebar on the left, one group per block. */
+@media (min-width: 960px) {
+  .layout { display: grid; grid-template-columns: 250px 1fr; gap: 24px; align-items: start; margin-top: 20px; }
+  #filters {
+    top: 16px;
+    margin: 0;
+    padding: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    background: var(--card);
+    backdrop-filter: none;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .groups { flex-direction: column; gap: 16px; margin-top: 16px; }
+  .group { flex-wrap: wrap; gap: 6px; }
+  .group .label { width: 100%; margin: 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.7rem; }
+  .group select { width: 100%; }
+  #count { margin-top: 0; }
+  #list > li:first-child { margin-top: 0; }
+}
+/* Medium screens keep the single column at a readable width. */
+@media (max-width: 959px) {
+  body { max-width: 900px; }
+}
+
 @media (max-width: 560px) {
   #list > li { grid-template-columns: 1fr; gap: 10px; }
   /* One swipeable row per group instead of wrapping chips. */
@@ -226,6 +252,7 @@ h2 a { color: inherit; }
       <p>Wait for the sale, skip the launch bugs, finish what you start.</p>
     </header>
 
+    <div class="layout">
     <form id="filters" onsubmit="return false">
       <input type="search" name="q" placeholder="Search games…" aria-label="Search games" />
       <div class="groups">
@@ -237,9 +264,12 @@ h2 a { color: inherit; }
       </div>
     </form>
 
-    <p id="count" aria-live="polite"></p>
-    <ol id="list"></ol>
-    <button id="more" type="button" hidden>Show more</button>
+    <main>
+      <p id="count" aria-live="polite"></p>
+      <ol id="list"></ol>
+      <button id="more" type="button" hidden>Show more</button>
+    </main>
+    </div>
 
     <footer>
       <p>Data from <a href="https://store.steampowered.com/">Steam</a> (price, Metascore, reviews, Deck status, features), <a href="https://www.cheapshark.com/">CheapShark</a> (best price and all-time low) and <a href="https://howlongtobeat.com/">HowLongToBeat</a> (playtime). Updated <span id="updated"></span>.</p>

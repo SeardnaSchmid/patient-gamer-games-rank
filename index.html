@@ -49,6 +49,27 @@ body {
   font: 16px/1.5 system-ui, sans-serif;
 }
 #count, footer { color: var(--muted); }
+#count b { color: var(--text); }
+#count small { display: block; margin-top: 2px; font-size: 0.78rem; }
+/* The list header: the count, and the patient rules every listed game passes as big pills. */
+.list-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 12px 0; }
+.list-head #count { margin: 0; }
+.rules { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rules li {
+  padding: 6px 14px;
+  border: 1px solid color-mix(in srgb, var(--good) 45%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--good) 12%, var(--card));
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.rules li::before { content: "✓ "; color: var(--good); }
+/* With Early Access games included, that rule turns amber with a "+". */
+.rules li.on { border-color: color-mix(in srgb, var(--ok) 55%, var(--line)); background: color-mix(in srgb, var(--ok) 14%, var(--card)); }
+.rules li.on::before { content: "+ "; color: var(--ok); }
+/* On a card: a game that isn't finished yet. */
+.ea { padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--ok) 22%, var(--chip)); color: var(--text); font-size: 0.75rem; font-weight: 600; }
 
 /* Banner: a tilted collage of the top-ranked covers, faded out behind the title. */
 .hero {
@@ -155,12 +176,8 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
 .reset:hover { text-decoration: underline; }
 .group select.set { background-color: var(--accent); color: var(--bg); font-weight: 600; }
 /* Rank by: the main choice, so tabs above the list rather than chips in the sidebar. */
-.rank-tabs { display: grid; grid-template-columns: 1fr 1fr auto auto; grid-template-rows: auto 1fr; gap: 6px 8px; margin: 0 0 12px; }
-.rank-tabs .major { grid-row: 1 / 3; }
-.rank-tabs .minor-label { grid-column: 3 / 5; align-self: end; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.rank-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 12px; }
 .rank-tabs .major b { font-size: 1.15rem; }
-.rank-tabs .minor span { justify-content: center; padding: 6px 12px; }
-.rank-tabs .minor b { font-size: 0.85rem; font-weight: 600; }
 .rank-tabs label { position: relative; }
 .rank-tabs input { position: absolute; opacity: 0; pointer-events: none; }
 .rank-tabs span {
@@ -185,11 +202,6 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
   /* With this many filter groups a sticky bar would cover half a phone screen. */
   #filters { position: static; }
 }
-@media (max-width: 560px) {
-  .rank-tabs { grid-template-columns: 1fr 1fr; grid-template-rows: none; }
-  .rank-tabs .major { grid-row: auto; }
-  .rank-tabs .minor-label { grid-column: 1 / 3; }
-}
 
 /* Steam's short description, two lines at most; the full text is in the tooltip. */
 .desc { margin: 2px 0 8px; font-size: 0.82rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -203,6 +215,7 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
 .kpi em { font-size: 0.66rem; font-style: normal; color: var(--muted); opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kpi em a { color: inherit; }
 .kpi.good b { color: var(--good); }
+.deals { margin: -4px 0 10px; font-size: 0.78rem; color: var(--muted); }
 .kpi.bad b { color: var(--low); }
 @media (max-width: 560px) { .kpis { grid-template-columns: 1fr 1fr 1fr; } }
 
@@ -210,25 +223,26 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
 .score.primary summary { font-weight: 600; font-size: 0.92rem; grid-template-columns: 120px 1fr 30px; }
 .score.primary .bar { height: 10px; }
 .score.primary b { font-size: 1rem; }
-/* Owned: a round icon button on the cover's top-right corner. */
+/* Owned: a toggle next to the title, green once owned; owned cards get a green edge. */
 .cover a { display: block; height: 100%; }
-.mine { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
-.mine button {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: rgb(0 0 0 / 0.6);
-  color: rgb(255 255 255 / 0.85);
-  font-size: 0.9rem;
-  line-height: 28px;
+.title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.own {
+  flex: none;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
-  backdrop-filter: blur(4px);
 }
-.mine button:hover { background: rgb(0 0 0 / 0.8); color: #fff; }
-.mine button[data-status="own"][aria-pressed="true"] { background: var(--good); color: #fff; }
-.mine button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.own:hover { border-color: var(--muted); }
+.own[data-own="true"] { background: var(--good); border-color: var(--good); color: #fff; }
+.own:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#list > li.owned { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); }
 
 #list { list-style: none; padding: 0; margin: 0; counter-reset: rank; }
 #list > li {
@@ -267,7 +281,12 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
   text-align: center;
 }
 h2 { margin: 0; font-size: 1.1rem; line-height: 1.3; }
-.meta { margin: 2px 0 6px; font-size: 0.8rem; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 8px; font-size: 0.8rem; color: var(--muted); }
+/* Genre pills: click to filter by that genre. */
+.tag { padding: 2px 10px; border: 0; border-radius: 999px; background: var(--chip); color: var(--text); font: inherit; font-size: 0.75rem; cursor: pointer; }
+.tag:hover { background: color-mix(in srgb, var(--accent) 22%, var(--chip)); }
+.tag.on { background: var(--accent); color: var(--bg); font-weight: 600; }
+.tag:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .meta a { color: inherit; text-decoration: underline; text-decoration-color: var(--line); }
 
 .score summary {
@@ -370,11 +389,13 @@ h2 a { color: inherit; }
       <div class="groups">
         <button type="reset" class="reset">Reset filters</button>
         <label class="group"><span class="label">Genre</span><select name="genre"><option value="">Any</option></select></label>
+        <div class="group" role="radiogroup" aria-label="Released"><span class="label">Released</span><label title="Every patient game is out for at least a year"><input type="radio" name="age" value="" checked /><span>Any</span></label><label title="Released 1 to 2 years ago: the newest games that are patient games now"><input type="radio" name="age" value="24" /><span>Fresh</span></label><label title="Released in the last 5 years"><input type="radio" name="age" value="60" /><span>≤ 5 years</span></label><label title="Released 10 or more years ago"><input type="radio" name="age" value="classic" /><span>Classics</span></label><select name="year" aria-label="Release year"><option value="">Any year</option></select></div>
         <div class="group" role="radiogroup" aria-label="Steam reviews"><span class="label">Reviews</span><label title="Every game here has at least 1,000 Steam reviews"><input type="radio" name="reviews" value="" checked /><span>Any</span></label><label title="At least 10,000 Steam reviews: well known, safe picks"><input type="radio" name="reviews" value="10000" /><span>10k+</span></label><label title="At least 100,000 Steam reviews: the big ones everybody played"><input type="radio" name="reviews" value="100000" /><span>100k+</span></label><label title="Under 10,000 Steam reviews: good games few people found"><input type="radio" name="reviews" value="gems" /><span>Hidden gems</span></label></div>
         <div class="group" role="radiogroup" aria-label="My games"><span class="label">My games</span><label><input type="radio" name="mine" value="" checked /><span>All</span></label><label><input type="radio" name="mine" value="open" /><span>Not owned</span></label><label><input type="radio" name="mine" value="own" /><span>Owned</span></label></div>
         <div class="group" role="radiogroup" aria-label="Steam list price"><span class="label">Price</span><label><input type="radio" name="price" value="" checked /><span>Any</span></label><label><input type="radio" name="price" value="0" /><span>Free</span></label><label><input type="radio" name="price" value="5" /><span>≤ $5</span></label><label><input type="radio" name="price" value="10" /><span>≤ $10</span></label><label><input type="radio" name="price" value="20" /><span>≤ $20</span></label></div>
         <div class="group" role="radiogroup" aria-label="Length"><span class="label">Length</span><label><input type="radio" name="hours" value="" checked /><span>Any</span></label><label><input type="radio" name="hours" value="5" /><span>≤ 5h</span></label><label><input type="radio" name="hours" value="10" /><span>≤ 10h</span></label><label><input type="radio" name="hours" value="20" /><span>≤ 20h</span></label><label><input type="radio" name="hours" value="40" /><span>≤ 40h</span></label></div>
-        <div class="group" role="radiogroup" aria-label="Show"><span class="label">Show</span><label><input type="radio" name="show" value="" checked /><span>Patient games</span></label><label><input type="radio" name="show" value="all" /><span>All games</span></label></div>
+        <div class="group" role="radiogroup" aria-label="Multiplayer"><span class="label">Multiplayer</span><label><input type="radio" name="mp" value="" checked /><span>Any</span></label><label title="Games with online co-op, PvP or MMO play"><input type="radio" name="mp" value="online" /><span>Online</span></label><label title="Online games whose community is still there: Multiplayer score 50 or more"><input type="radio" name="mp" value="active" /><span>Active online</span></label></div>
+        <div class="group" role="radiogroup" aria-label="Early Access"><span class="label">Early Access</span><label title="Only finished games"><input type="radio" name="ea" value="" checked /><span>Leave out</span></label><label title="Also games that have been in Early Access for a year or more"><input type="radio" name="ea" value="1" /><span>Include 1+ yr</span></label></div>
       </div>
     </form>
 
@@ -382,23 +403,28 @@ h2 a { color: inherit; }
       <div class="rank-tabs" id="rank-tabs" role="radiogroup" aria-label="Rank by">
         <label class="major"><input type="radio" form="filters" name="sort" value="worth" checked /><span><b>Worth the wait</b><small>How good it is today, players and critics</small></span></label>
         <label class="major"><input type="radio" form="filters" name="sort" value="dad" /><span><b>Gamer Dad</b><small>Fits a busy life: short, good, on the couch or a Deck</small></span></label>
-        <span class="minor-label">Other lens</span>
-        <label class="minor"><input type="radio" form="filters" name="sort" value="mp" /><span><b>Multiplayer</b></span></label>
       </div>
-      <p id="count" aria-live="polite"></p>
+      <div class="list-head">
+        <p id="count" aria-live="polite"></p>
+        <ul class="rules" aria-label="Every game here is">
+          <li title="Out for at least 12 months: the hype is over and the patches are in">Released 1+ year ago</li>
+          <li id="ea-rule" title="Not still in development; the Early Access filter can include games a year into it">No Early Access</li>
+          <li title="No free-to-play with in-app purchases, no MMO: a game that ends">No live service</li>
+        </ul>
+      </div>
       <ol id="list"></ol>
       <button id="more" type="button" hidden>Show more</button>
     </main>
     </div>
 
     <footer>
-      <p>Data from <a href="https://store.steampowered.com/">Steam</a> (reviews, list price, Deck status, features), <a href="https://www.metacritic.com/">Metacritic</a> (critic and user scores), <a href="https://www.gog.com/">GOG</a> (user rating) and <a href="https://howlongtobeat.com/">HowLongToBeat</a> (playtime, user rating). Prices are Steam's US list price; <a href="https://isthereanydeal.com/">IsThereAnyDeal</a> has today's best offer. Updated <span id="updated"></span>.</p>
+      <p>Data from <a href="https://store.steampowered.com/">Steam</a> (reviews, list price, Deck status, features), <a href="https://www.metacritic.com/">Metacritic</a> (critic and user scores), <a href="https://www.gog.com/">GOG</a> (user rating) and <a href="https://howlongtobeat.com/">HowLongToBeat</a> (playtime, user rating). Prices are US dollars, live from <a href="https://www.cheapshark.com/">CheapShark</a> (Steam and other official stores) when a card comes into view; <a href="https://gg.deals/">GG.deals</a> compares key sellers. Updated <span id="updated"></span>.</p>
       <details>
         <summary>How the scores work</summary>
-        <p><b>Patient games</b> are out for at least a year and finished: not Early Access, not live service. The page shows only those unless you pick "All games".</p>
+        <p><b>Patient games</b> are out for at least a year and finished: not Early Access, not live service. The page shows only those. The Early Access filter can also show games that have been in Early Access for a year or more; they carry an "Early Access" badge.</p>
         <p><b>Worth the wait</b> (0–100), how good is it today? Read it like a review score: 60 % players, 40 % critics. Players is the average of every player rating with at least 50 votes, each weighted by the number of digits of its vote count (1,000 votes weigh 3, a million weigh 6, so more votes count more without one site drowning out the others): Steam reviews of the last 6 months (all of them if there are too few, adjusted for how many there are), Metacritic user score, GOG and HowLongToBeat ratings, each scaled to 0–100. Critics is the Metascore. A missing source is left out; if a side is missing entirely, the other counts alone. Being finished is what makes a game patient, and the change since launch is on the card; neither adds points.</p>
-        <p><b>Gamer Dad</b> (0–100), does it fit a busy life? 30 for a short main story (full at 10 hours or less, nothing at 60 or more; HowLongToBeat), 25 for quality (full at Worth the wait 95, nothing at 70 or less), 15 for Steam Deck Verified (8 for Playable), 10 for full controller support (5 partial), 10 for Steam Cloud saves, 10 for the Steam "Save Anytime" tag, −20 for live service.</p>
-        <p>One other lens, <b>Multiplayer</b> (0–100, games with online play only), is the community still there? 35 for players (log scale, 10k peak a day is full), 25 for review activity in the last 6 months compared with the 6 before, 25 for quality now, 15 for an announcement from the developers within the last 3 months.</p>
+        <p><b>Gamer Dad</b> (0–100), does it fit a busy life? 30 for a short main story (full at 10 hours or less, nothing at 60 or more; HowLongToBeat), 25 for quality (full at Worth the wait 95, nothing at 70 or less), 15 for Steam Deck Verified (8 for Playable), 10 for full controller support (5 partial), 10 for Steam Cloud saves, 10 for the Steam "Save Anytime" tag.</p>
+        <p><b>Multiplayer</b> (0–100, shown on cards when the Multiplayer filter is on; "Active online" means 50 or more), is the community still there? 35 for players (log scale, 10k peak a day is full), 25 for review activity in the last 6 months compared with the 6 before, 25 for quality now, 15 for an announcement from the developers within the last 3 months.</p>
         <p>Click a score to see each value it's based on.</p>
       </details>
     </footer>

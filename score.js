@@ -37,7 +37,10 @@ export function qualityNow(g) {
 export const isOnline = (g) => !!(g.onlineCoop || g.onlinePvp || g.mmo);
 
 // A patient game: out for a year, and finished (not Early Access, not live service).
-export const isPatient = (g, now = new Date()) => ageMonths(g, now) >= 12 && !g.earlyAccess && !g.liveService;
+// With allowEarlyAccess, a game in Early Access for a year counts too (Steam dates
+// an Early Access game from its Early Access launch, a finished one from 1.0).
+export const isPatient = (g, now = new Date(), allowEarlyAccess = false) =>
+  ageMonths(g, now) >= 12 && (allowEarlyAccess || !g.earlyAccess) && !g.liveService;
 
 // Positive-% points gained since the launch quarter, or null when there is no
 // fair comparison yet (too young, or too few reviews in either window).
@@ -96,7 +99,8 @@ export function worthScore(g) {
 }
 
 // Short enough to finish, good enough to be worth the few hours there are, and
-// playable on the couch or a Steam Deck in short sessions.
+// playable on the couch or a Steam Deck in short sessions. (Live service games
+// never get here: they aren't patient games.)
 const DECK = { verified: 15, playable: 8 };
 export function dadScore(g) {
   const worth = worthScore(g).score;
@@ -107,7 +111,6 @@ export function dadScore(g) {
     Controller: [g.controller === "full" ? 10 : g.controller === "partial" ? 5 : 0, `${g.controller} controller support`],
     "Cloud saves": [g.cloud ? 10 : 0, "Steam Cloud"],
     "Save anytime": [g.saveAnytime ? 10 : 0, "Steam tag"],
-    "Live service": [g.liveService ? -20 : 0, "free-to-play with in-app purchases, or MMO"],
   });
 }
 

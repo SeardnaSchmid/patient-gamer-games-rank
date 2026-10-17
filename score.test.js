@@ -76,6 +76,8 @@ test("patient games are a year old and finished", () => {
   assert.ok(isPatient(base, now));
   assert.ok(!isPatient({ ...base, released: "2026-01-01" }, now));
   assert.ok(!isPatient({ ...base, earlyAccess: true }, now));
+  assert.ok(isPatient({ ...base, earlyAccess: true }, now, true)); // opted in: a year in Early Access is enough
+  assert.ok(!isPatient({ ...base, earlyAccess: true, released: "2026-01-01" }, now, true));
   assert.ok(!isPatient({ ...base, liveService: true }, now));
 });
 

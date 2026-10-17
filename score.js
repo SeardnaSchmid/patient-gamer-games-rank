@@ -1,10 +1,9 @@
 // Pure scoring, shared by the page and the tests. Every input is a fetched
-// value (see scripts/fetch.mjs) or derived from the price history; each part
-// carries the value it is based on so the page can show the reasoning.
+// value (see scripts/fetch.mjs); each part carries the value it is based on so
+// the page can show the reasoning.
 //
-//   Worth the wait  Is the game good and finished today?     (patient gamer)
-//   Buy now      Is today a good moment to buy it?            (patient gamer)
-//   Gamer Dad    Does it fit a busy schedule?
+//   Worth the wait  How good is the game today?
+//   Gamer Dad    Does it fit a busy life?
 //   Multiplayer  Is the online part still alive, years on?    (online games only)
 
 const DAY = 864e5;
@@ -27,12 +26,12 @@ export function rating(pct, n) {
 }
 
 // Quality today: the last 6 months of Steam reviews when there are enough,
-// otherwise all of them. One scale for every game; Metascore stays separate.
+// otherwise all of them.
 export function qualityNow(g) {
   const recent = g.recentReviews >= 50;
   const pct = recent ? g.recentPct : g.steamPct;
   const n = recent ? g.recentReviews : g.steamReviews;
-  return { value: rating(pct, n), note: `${pct}% of ${fmtN(n)} Steam reviews${recent ? " in the last 6 months" : ""}` };
+  return { value: rating(pct, n), n, note: `${pct}% of ${fmtN(n)} Steam reviews${recent ? " in the last 6 months" : ""}` };
 }
 
 export const isOnline = (g) => !!(g.onlineCoop || g.onlinePvp || g.mmo);
@@ -46,44 +45,64 @@ export function launchTrend(g, now = new Date()) {
   return ageMonths(g, now) >= 9 && g.launchReviews >= 20 && g.recentReviews >= 20 ? g.recentPct - g.launchPct : null;
 }
 
-export function worthScore(g, now = new Date()) {
-  const age = ageMonths(g, now);
+// Fewer ratings than this and a source says little; it is left out.
+const MIN_RATINGS = 50;
+
+// Every player source, each on 0–100: [source, value or null, basis, ratings].
+// A source without enough ratings has value null and says why, so the page can show it.
+export function playerRatings(g) {
   const q = qualityNow(g);
-  const trend = launchTrend(g, now);
-  return total({
-    "Quality now": [q.value == null ? 0 : ramp(q.value, 70, 95, 50), q.note],
-    // Held up (±0) earns 15 of 25, fixed since launch earns the rest.
-    "Since launch": [trend == null ? 0 : ramp(trend, -15, 10, 25),
-      trend != null ? `${g.launchPct}% at launch → ${g.recentPct}% now` : age < 9 ? "too new to compare" : "no review history yet"],
-    Finished: g.earlyAccess ? [0, "Early Access"]
-      : g.liveService ? [0, "live service, never finished by design"]
-      : [ramp(age, 6, 12, 15), `${Math.floor(age / 12)}y ${age % 12}m since release`],
-    Critics: [g.metascore == null ? 0 : ramp(g.metascore, 60, 95, 10), g.metascore == null ? "no Metascore" : `Metascore ${g.metascore}`],
-  });
+  const src = (name, n, value, basis) =>
+    [name, n >= MIN_RATINGS ? value : null, !n ? "no rating" : n >= MIN_RATINGS ? basis : `only ${n} ratings, too few`, n];
+  return [
+    ["Steam", q.value, q.value == null ? "no reviews" : `${q.note}, adjusted for how many`, q.n],
+    src("Metacritic users", g.mcUsers, g.mcUser * 10, `${g.mcUser}/10 from ${fmtN(g.mcUsers ?? 0)} ratings`),
+    src("GOG", g.gogReviews, g.gogScore * 20, `${g.gogScore}/5 from ${fmtN(g.gogReviews ?? 0)} reviews`),
+    src("HowLongToBeat", g.hltbReviews, g.hltbScore, `${g.hltbScore}% from ${fmtN(g.hltbReviews ?? 0)} reviews`),
+  ];
 }
 
-// null for a game that is free anyway: there is nothing to wait for.
-export function dealScore(g) {
-  if (!g.price && !g.regularPrice) return null;
-  const regular = Math.max(g.regularPrice ?? 0, g.price);
-  const discount = 1 - g.price / regular;
-  // 1 at the all-time low, 0 at twice the low or more.
-  const nearLow = g.lowest ? clamp(2 - g.price / g.lowest, 0, 1) : 0;
-  // The typical price needs our own history; until then the other two share its weight.
-  const [wDiscount, wLow] = g.typical ? [40, 40] : [50, 50];
-  return total({
-    Discount: [ramp(discount, 0, 0.75, wDiscount), discount > 0.005 ? `${Math.round(discount * 100)}% off the $${regular} list price` : `list price $${regular}`],
-    "All-time low": [nearLow * wLow, g.lowest == null ? "all-time low unknown" : g.price <= g.lowest ? `at the all-time low $${g.lowest} (CheapShark)` : `low is $${g.lowest} (CheapShark)`],
-    "Typical price": g.typical ? [ramp(g.price / g.typical, 1.1, 0.8, 20), `usually $${g.typical} (tracked here)`] : [0, "needs 30 days of price history"],
-  });
+// Metacritic's own page first (all platforms), else the score Steam shows.
+export const metascore = (g) => g.mcScore ?? g.metascore ?? null;
+
+// How good the game is today, on a review scale: players and critics blended
+// 60/40. Players is the average of every source with enough ratings, each
+// weighted by the digits of its rating count (log10): 1,000 ratings weigh 3,
+// 1 million weigh 6. More ratings count more, but Steam's millions can't drown
+// out the other sites (weighting by the count itself would). A missing source
+// is left out, not counted as zero. Being finished is the
+// patient filter and the change since launch is shown on the card; neither
+// adds points (recent reviews already show a game that was fixed).
+// ponytail: sources run on different scales (Steam is % positive, the others
+// are average ratings, usually lower), so fewer sources tends to mean a higher
+// score; calibrate each source against Steam if that skews the ranking.
+const WORTH = { Players: 0.6, Critics: 0.4 };
+export function worthScore(g) {
+  const players = playerRatings(g);
+  const w = (src) => (src[1] == null ? 0 : Math.log10(src[3]));
+  const sum = players.reduce((a, src) => a + w(src), 0);
+  const mc = metascore(g);
+  // Each side: [value, how it is made, the sources behind it as [source, value, basis]].
+  const sides = {
+    Players: [sum ? players.reduce((a, src) => a + src[1] * w(src), 0) / sum : null,
+      sum ? "weighted by number of ratings" : "no player ratings",
+      players.map((src) => [src[0], src[1], src[1] == null ? src[2] : `weight ${Math.round((w(src) / sum) * 100)}% · ${src[2]}`])],
+    Critics: [mc, mc == null ? "no Metascore" : "Metascore",
+      [["Metacritic", mc, mc == null ? "no Metascore" : g.mcCritics ? `from ${g.mcCritics} critics` : "as shown on Steam"]]],
+  };
+  const weight = Object.entries(sides).reduce((a, [k, [v]]) => a + (v == null ? 0 : WORTH[k]), 0);
+  return total(Object.fromEntries(Object.entries(sides).map(([k, [v, how, sources]]) =>
+    [k, v == null ? [0, how, sources] : [(v * WORTH[k]) / weight, `${Math.round(v)} × ${Math.round((WORTH[k] / weight) * 100)}% · ${how}`, sources]])));
 }
 
+// Short enough to finish, good enough to be worth the few hours there are, and
+// playable on the couch or a Steam Deck in short sessions.
 const DECK = { verified: 15, playable: 8 };
 export function dadScore(g) {
-  const q = qualityNow(g);
+  const worth = worthScore(g).score;
   return total({
     Finishable: [g.hours == null ? 0 : ramp(g.hours, 60, 10, 30), g.hours == null ? "no HowLongToBeat time" : `${g.hours}h main story (HowLongToBeat)`],
-    Quality: [q.value == null ? 0 : ramp(q.value, 70, 95, 25), q.note],
+    Quality: [ramp(worth, 70, 95, 25), `Worth the wait ${worth}`],
     "Steam Deck": [DECK[g.deck] ?? 0, `Deck ${g.deck}`],
     Controller: [g.controller === "full" ? 10 : g.controller === "partial" ? 5 : 0, `${g.controller} controller support`],
     "Cloud saves": [g.cloud ? 10 : 0, "Steam Cloud"],
@@ -105,18 +124,6 @@ export function multiplayerScore(g, now = new Date()) {
     "Quality now": [q.value == null ? 0 : ramp(q.value, 70, 95, 25), q.note],
     "Still updated": [newsDays == null ? 0 : ramp(newsDays, 365, 90, 15), g.lastNews ? `last announcement ${g.lastNews}` : "no announcements"],
   });
-}
-
-// The price a game sat at for at least half of the tracked time. points are
-// [time ms, price] sorted by time; each holds until the next one, the last
-// until `end`. null until 30 days are tracked.
-export function typicalPrice(points, end) {
-  if (!points.length || end - points[0][0] < 30 * DAY) return null;
-  const spans = points.map(([t, p], i) => [p, (points[i + 1]?.[0] ?? end) - t]).sort((a, b) => a[0] - b[0]);
-  let acc = 0;
-  const half = (end - points[0][0]) / 2;
-  for (const [p, d] of spans) if ((acc += d) >= half) return p;
-  return spans.at(-1)[0];
 }
 
 function total(parts) {

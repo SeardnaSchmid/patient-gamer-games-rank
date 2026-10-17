@@ -1,10 +1,9 @@
 # Publishes the site on GitHub Pages. No build step: plain HTML/JS/JSON.
 #
-# games.json and history.json are not in the repo. The daily run fetches every
-# game fresh, seeded with the previous release so a failing source keeps
-# yesterday's values, appends today's values to the history carried over from
-# that release, and publishes both as a release (data-YYYY-MM-DD) before
-# deploying. Pushes and plain manual runs deploy the latest release's data.
+# games.json is not in the repo. The weekly run fetches every game fresh,
+# seeded with the previous release so a failing source keeps last week's
+# values, and publishes it as a release (data-YYYY-MM-DD) before deploying.
+# Pushes and plain manual runs deploy the latest release's data.
 name: Deploy to GitHub Pages
 
 on:
@@ -17,7 +16,7 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: "0 5 * * *" # daily 05:00 UTC
+    - cron: "0 5 * * 1" # Mondays 05:00 UTC; nothing here changes by the day
 
 permissions:
   contents: write # create the data releases
@@ -44,10 +43,7 @@ jobs:
           node-version: 22
 
       - name: Download latest game data
-        run: |
-          gh release download --pattern games.json
-          # Older releases have no history yet; history.mjs then starts one.
-          gh release download --pattern history.json || true
+        run: gh release download --pattern games.json
 
       - name: Fetch game data
         if: env.FETCH == 'true'
@@ -55,12 +51,8 @@ jobs:
           LIMIT: 100000
           REFRESH_DAYS: 0
           MONTHLY_LIMIT: 100000 # runs alongside Steam's rate-limit pause, so all due games fit
-          MAX_MINUTES: 300 # stop early and save, leaving room for prices and the release
+          MAX_MINUTES: 300 # stop early and save, leaving room for the release
         run: node scripts/fetch.mjs
-
-      - name: Append to history
-        if: env.FETCH == 'true'
-        run: node scripts/history.mjs
 
       # Before the release, so broken data is never published or deployed.
       - run: node --test
@@ -71,9 +63,9 @@ jobs:
           day=$(date -u +%F)
           n=$(node -p 'require("./games.json").games.length')
           # A second run on the same day replaces that day's file.
-          gh release create "data-$day" games.json history.json --title "Game data $day" \
-            --notes "$n games from Steam, SteamSpy, CheapShark and HowLongToBeat, plus the price and rating history of every day so far." \
-            || gh release upload "data-$day" games.json history.json --clobber
+          gh release create "data-$day" games.json --title "Game data $day" \
+            --notes "$n games from Steam, SteamSpy, Metacritic, GOG and HowLongToBeat." \
+            || gh release upload "data-$day" games.json --clobber
 
       - uses: actions/upload-pages-artifact@v3
         with:

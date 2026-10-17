@@ -1,14 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { worthScore, dealScore, dadScore, multiplayerScore, typicalPrice, rating, ageMonths, isPatient } from "./score.js";
+import { worthScore, dadScore, multiplayerScore, rating, ageMonths, isPatient } from "./score.js";
 
-const DAY = 864e5;
 const now = new Date("2026-10-01");
 const base = {
   title: "Game", released: "2023-01-15", metascore: 90, steamPct: 95, steamReviews: 50000,
   recentPct: 95, recentReviews: 2000, launchPct: 85, launchReviews: 5000, prevReviews: 2000,
-  price: 10, regularPrice: 40, lowest: 10, hours: 10, deck: "verified", controller: "full", cloud: true, saveAnytime: true,
+  regularPrice: 40, hours: 10, deck: "verified", controller: "full", cloud: true, saveAnytime: true,
   liveService: false, earlyAccess: false, onlineCoop: false, onlinePvp: false, mmo: false, ccu: 5000, lastNews: "2026-09-01",
 };
 
@@ -18,43 +17,36 @@ test("rating pulls small samples toward 50 %", () => {
   assert.equal(rating(null, 10), null);
 });
 
-test("a fixed, finished, well-reviewed game is worth it", () => {
-  const { score, parts } = worthScore(base, now);
-  assert.equal(parts["Since launch"][0], 25); // 85 % → 95 %
-  assert.equal(parts.Finished[0], 15);
-  assert.ok(score >= 85, `got ${score}`); // 95 % of 2,000 recent reviews rates 90.4 → 41 of 50
+test("worth the wait blends players and critics 60/40", () => {
+  const { score, parts } = worthScore(base); // 95 % of 2,000 recent reviews rates 90.4
+  assert.equal(Math.round(parts.Players[0]), 54);
+  assert.equal(parts.Critics[0], 36);
+  assert.equal(score, 90);
 });
 
-test("a game that got worse since launch loses the trend points", () => {
-  assert.equal(worthScore({ ...base, launchPct: 95, recentPct: 78 }, now).parts["Since launch"][0], 0);
+test("players weigh every source with enough ratings by the digits of its rating count", () => {
+  const g = { ...base, mcUser: 8, mcUsers: 1000, gogScore: 4.5, gogReviews: 20, hltbScore: 86, hltbReviews: 500 };
+  const [points, , sources] = worthScore(g).parts.Players;
+  // weights: Steam 2,000 reviews → 3.3, Metacritic 1,000 → 3, HowLongToBeat 500 → 2.7
+  const w = [Math.log10(2000), 3, Math.log10(500)];
+  assert.ok(Math.abs(points / 0.6 - (rating(95, 2000) * w[0] + 80 * w[1] + 86 * w[2]) / (w[0] + w[1] + w[2])) < 1e-9);
+  assert.deepEqual(sources.map(([src, v]) => [src, v && Math.round(v)]), [["Steam", 90], ["Metacritic users", 80], ["GOG", null], ["HowLongToBeat", 86]]);
+  assert.match(sources[0][2], /^weight 37% · /);
+  assert.equal(sources[2][2], "only 20 ratings, too few");
 });
 
-test("early access and live service are never finished", () => {
-  assert.equal(worthScore({ ...base, earlyAccess: true }, now).parts.Finished[0], 0);
-  assert.equal(worthScore({ ...base, liveService: true }, now).parts.Finished[0], 0);
+test("Metacritic's page beats the Metascore Steam shows", () => {
+  assert.equal(worthScore({ ...base, mcScore: 70 }).parts.Critics[0], 28);
 });
 
-test("a young game is not compared with its own launch", () => {
-  assert.equal(worthScore({ ...base, released: "2026-06-01" }, now).parts["Since launch"][1], "too new to compare");
+test("a missing side is left out, not counted as zero", () => {
+  assert.equal(worthScore({ ...base, metascore: null }).score, 90); // players alone
+  assert.equal(worthScore({ ...base, steamPct: null, recentReviews: 0 }).score, 90); // critics alone
 });
 
-test("75 % off at the all-time low is the best deal; full price far above the low is none", () => {
-  assert.equal(dealScore(base).score, 100);
-  assert.equal(dealScore({ ...base, price: 40, lowest: 10 }).score, 0);
-});
-
-test("the typical price takes a share of the deal once there is history", () => {
-  const { parts } = dealScore({ ...base, typical: 20 });
-  assert.equal(parts.Discount[0], 40);
-  assert.equal(parts["Typical price"][0], 20);
-});
-
-test("an unknown all-time low earns nothing instead of counting as reached", () => {
-  assert.equal(dealScore({ ...base, lowest: null }).parts["All-time low"][0], 0);
-});
-
-test("free games have no deal score", () => {
-  assert.equal(dealScore({ ...base, price: 0, regularPrice: 0, lowest: 0 }), null);
+test("a bad launch that was fixed does not beat a game that was great all along", () => {
+  const fixed = worthScore({ ...base, launchPct: 60, recentPct: 85 }).score;
+  assert.ok(fixed < worthScore(base).score);
 });
 
 test("multiplayer score only for online games, and rewards a living community", () => {
@@ -68,19 +60,16 @@ test("long games lose Gamer Dad points", () => {
   assert.ok(dadScore({ ...base, hours: 80 }).score < dadScore(base).score - 25);
 });
 
-test("missing data scores zero, not NaN", () => {
-  const g = { ...base, metascore: null, steamPct: null, recentPct: null, recentReviews: 0, launchPct: null, launchReviews: 0, hours: null, deck: "unknown" };
-  for (const s of [worthScore(g, now), dealScore(g), dadScore(g), multiplayerScore({ ...g, onlinePvp: true }, now)]) {
-    assert.ok(Number.isFinite(s.score));
-  }
+test("Gamer Dad quality follows Worth the wait", () => {
+  assert.equal(dadScore(base).parts.Quality[1], `Worth the wait ${worthScore(base).score}`);
+  assert.ok(dadScore({ ...base, metascore: 60, recentPct: 70 }).parts.Quality[0] < dadScore(base).parts.Quality[0]);
 });
 
-test("typical price is where the game sat for at least half the time", () => {
-  const t0 = Date.parse("2026-08-01");
-  // $20 for 40 days, $5 for 10 days, $20 for 10 days → typically $20
-  const pts = [[t0, 20], [t0 + 40 * DAY, 5], [t0 + 50 * DAY, 20]];
-  assert.equal(typicalPrice(pts, t0 + 60 * DAY), 20);
-  assert.equal(typicalPrice(pts, t0 + 20 * DAY), null); // under 30 days
+test("missing data scores zero, not NaN", () => {
+  const g = { ...base, metascore: null, steamPct: null, recentPct: null, recentReviews: 0, launchPct: null, launchReviews: 0, hours: null, deck: "unknown" };
+  for (const s of [worthScore(g), dadScore(g), multiplayerScore({ ...g, onlinePvp: true }, now)]) {
+    assert.ok(Number.isFinite(s.score));
+  }
 });
 
 test("patient games are a year old and finished", () => {
@@ -96,7 +85,7 @@ test("every fetched game has the fields the scores need", () => {
   const { games } = JSON.parse(readFileSync(new URL("./games.json", import.meta.url)));
   assert.ok(games.length > 0);
   for (const g of games) {
-    for (const k of ["appid", "title", "released", "price", "deck", "controller"]) assert.ok(g[k] != null, `${g.title}: ${k}`);
+    for (const k of ["appid", "title", "released", "regularPrice", "deck", "controller"]) assert.ok(g[k] != null, `${g.title}: ${k}`);
     assert.match(g.released, /^\d{4}-\d{2}-\d{2}$/, g.title);
   }
 });

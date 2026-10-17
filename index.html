@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Patient games ranked: patched, complete, and how good today's deal is." />
-    <title>Patient Gamers Rank</title>
+    <meta name="description" content="Day one is for beta testers. The best games once they are patched, finished and cheaper, ranked by players and critics, and by how well they fit a busy life." />
+    <title>Patient Gamers Rank: day one is for beta testers</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏳</text></svg>" />
     <style>
 :root {
@@ -79,6 +79,7 @@ body {
 }
 .hero-text { position: relative; z-index: 1; padding: 22px 28px; max-width: 520px; }
 .hero h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1.05; letter-spacing: -0.02em; }
+.kicker { margin: 0 0 6px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
 .claim { margin: 10px 0 14px; font-size: 1.05rem; color: var(--muted); }
 .stats { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; font-size: 0.8rem; }
 .stats span { padding: 2px 10px; border-radius: 999px; background: var(--chip); color: var(--muted); }
@@ -190,15 +191,20 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
   .rank-tabs .minor-label { grid-column: 1 / 3; }
 }
 
+/* Steam's short description, two lines at most; the full text is in the tooltip. */
+.desc { margin: 2px 0 8px; font-size: 0.82rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
 /* KPI tiles: the numbers a patient gamer decides on. */
-.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 4px 0 10px; }
+.kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 4px 0 10px; }
 .kpi { display: flex; flex-direction: column; min-width: 0; }
 .kpi span { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 .kpi b { font-size: 1.15rem; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .kpi small { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi em { font-size: 0.66rem; font-style: normal; color: var(--muted); opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi em a { color: inherit; }
 .kpi.good b { color: var(--good); }
 .kpi.bad b { color: var(--low); }
-@media (max-width: 560px) { .kpis { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .kpis { grid-template-columns: 1fr 1fr 1fr; } }
 
 /* Patient scores bold. */
 .score.primary summary { font-weight: 600; font-size: 0.92rem; grid-template-columns: 120px 1fr 30px; }
@@ -228,7 +234,7 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
 #list > li {
   counter-increment: rank;
   display: grid;
-  grid-template-columns: 230px 1fr;
+  grid-template-columns: 160px 1fr;
   gap: 16px;
   margin: 12px 0;
   padding: 12px;
@@ -240,12 +246,12 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
   position: relative;
   display: block;
   align-self: start;
-  aspect-ratio: 460 / 215;
+  aspect-ratio: 2 / 3; /* Steam's portrait library cover; phones get the wide header */
   border-radius: 8px;
   overflow: hidden;
   background: var(--line);
 }
-.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover picture, .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cover::after {
   content: counter(rank);
   position: absolute;
@@ -280,19 +286,19 @@ h2 { margin: 0; font-size: 1.1rem; line-height: 1.3; }
 .bar i.hi { background: var(--good); }
 .score.none { display: grid; grid-template-columns: 100px 1fr; gap: 10px; font-size: 0.85rem; color: var(--muted); }
 .score b { text-align: right; font-variant-numeric: tabular-nums; }
-.score ul { margin: 4px 0 8px; padding: 0; list-style: none; font-size: 0.8rem; color: var(--muted); max-width: 440px; }
+.score ul { margin: 4px 0 8px; padding: 0; list-style: none; font-size: 0.8rem; color: var(--muted); max-width: 560px; }
 .score li { display: flex; justify-content: space-between; gap: 12px; }
 .score li.zero { opacity: 0.5; }
+/* One row per source behind a part: name, its own bar, its value, what it's based on. */
+.score li.src { display: grid; grid-template-columns: 8.5rem 4rem 1.6rem 1fr; align-items: center; gap: 8px; padding-left: 12px; font-size: 0.75rem; }
+.score li.src .bar { height: 4px; }
+.score li.src b { font-weight: 600; }
+.score li.src small { overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .score li.src { grid-template-columns: 7.5rem 1fr 1.6rem; row-gap: 0; }
+  .score li.src small { grid-column: 1 / -1; margin-bottom: 4px; }
+}
 .score small { opacity: 0.8; }
-.price-chart { margin: 4px 0 10px; max-width: 440px; }
-.price-note { margin: 4px 0 10px; font-size: 0.78rem; color: var(--muted); }
-.price-chart figcaption { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); }
-.price-chart .lowkey { color: var(--good); }
-.price-chart svg { display: block; width: 100%; height: 40px; overflow: visible; }
-.price-chart path { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
-.price-chart .low { stroke: var(--good); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
-.price-chart rect { fill: transparent; }
-.price-chart rect:hover { fill: color-mix(in srgb, var(--accent) 12%, transparent); }
 #more {
   display: block;
   margin: 16px auto;
@@ -337,6 +343,7 @@ h2 a { color: inherit; }
 
 @media (max-width: 560px) {
   #list > li { grid-template-columns: 1fr; gap: 10px; }
+  .cover { aspect-ratio: 460 / 215; }
   /* One swipeable row per group instead of wrapping chips. */
   .groups { flex-direction: column; gap: 6px; }
   .group { overflow-x: auto; scrollbar-width: none; }
@@ -350,8 +357,9 @@ h2 a { color: inherit; }
     <header class="hero">
       <div class="hero-art" id="hero-art" aria-hidden="true"></div>
       <div class="hero-text">
-        <h1>Patient Gamers Rank</h1>
-        <p class="claim">Patched, complete, cheaper: the best games now that the hype is over.</p>
+        <p class="kicker">Patient Gamers Rank</p>
+        <h1>Day one is for beta testers.</h1>
+        <p class="claim">You play the finished game: bugs patched, content complete, price dropped. The best games, ranked, now that the hype is over.</p>
         <p class="stats" id="stats"></p>
       </div>
     </header>
@@ -362,9 +370,9 @@ h2 a { color: inherit; }
       <div class="groups">
         <button type="reset" class="reset">Reset filters</button>
         <label class="group"><span class="label">Genre</span><select name="genre"><option value="">Any</option></select></label>
+        <div class="group" role="radiogroup" aria-label="Steam reviews"><span class="label">Reviews</span><label title="Every game here has at least 1,000 Steam reviews"><input type="radio" name="reviews" value="" checked /><span>Any</span></label><label title="At least 10,000 Steam reviews: well known, safe picks"><input type="radio" name="reviews" value="10000" /><span>10k+</span></label><label title="At least 100,000 Steam reviews: the big ones everybody played"><input type="radio" name="reviews" value="100000" /><span>100k+</span></label><label title="Under 10,000 Steam reviews: good games few people found"><input type="radio" name="reviews" value="gems" /><span>Hidden gems</span></label></div>
         <div class="group" role="radiogroup" aria-label="My games"><span class="label">My games</span><label><input type="radio" name="mine" value="" checked /><span>All</span></label><label><input type="radio" name="mine" value="open" /><span>Not owned</span></label><label><input type="radio" name="mine" value="own" /><span>Owned</span></label></div>
-        <div class="group" role="radiogroup" aria-label="Price"><span class="label">Price</span><label><input type="radio" name="price" value="" checked /><span>Any</span></label><label><input type="radio" name="price" value="0" /><span>Free</span></label><label><input type="radio" name="price" value="5" /><span>≤ $5</span></label><label><input type="radio" name="price" value="10" /><span>≤ $10</span></label><label><input type="radio" name="price" value="20" /><span>≤ $20</span></label></div>
-        <div class="group" role="radiogroup" aria-label="Deal"><span class="label">Deal</span><label><input type="radio" name="deal" value="" checked /><span>Any</span></label><label><input type="radio" name="deal" value="sale" /><span>On sale</span></label><label><input type="radio" name="deal" value="low" /><span>All-time low</span></label></div>
+        <div class="group" role="radiogroup" aria-label="Steam list price"><span class="label">Price</span><label><input type="radio" name="price" value="" checked /><span>Any</span></label><label><input type="radio" name="price" value="0" /><span>Free</span></label><label><input type="radio" name="price" value="5" /><span>≤ $5</span></label><label><input type="radio" name="price" value="10" /><span>≤ $10</span></label><label><input type="radio" name="price" value="20" /><span>≤ $20</span></label></div>
         <div class="group" role="radiogroup" aria-label="Length"><span class="label">Length</span><label><input type="radio" name="hours" value="" checked /><span>Any</span></label><label><input type="radio" name="hours" value="5" /><span>≤ 5h</span></label><label><input type="radio" name="hours" value="10" /><span>≤ 10h</span></label><label><input type="radio" name="hours" value="20" /><span>≤ 20h</span></label><label><input type="radio" name="hours" value="40" /><span>≤ 40h</span></label></div>
         <div class="group" role="radiogroup" aria-label="Show"><span class="label">Show</span><label><input type="radio" name="show" value="" checked /><span>Patient games</span></label><label><input type="radio" name="show" value="all" /><span>All games</span></label></div>
       </div>
@@ -372,10 +380,9 @@ h2 a { color: inherit; }
 
     <main>
       <div class="rank-tabs" id="rank-tabs" role="radiogroup" aria-label="Rank by">
-        <label class="major"><input type="radio" form="filters" name="sort" value="worth" checked /><span><b>Worth the wait</b><small>Good and finished now that the hype is over</small></span></label>
-        <label class="major"><input type="radio" form="filters" name="sort" value="deal" /><span><b>Buy now</b><small>The patient moment: deep discount, near its lowest price</small></span></label>
-        <span class="minor-label">Other lenses</span>
-        <label class="minor"><input type="radio" form="filters" name="sort" value="dad" /><span><b>Gamer Dad</b></span></label>
+        <label class="major"><input type="radio" form="filters" name="sort" value="worth" checked /><span><b>Worth the wait</b><small>How good it is today, players and critics</small></span></label>
+        <label class="major"><input type="radio" form="filters" name="sort" value="dad" /><span><b>Gamer Dad</b><small>Fits a busy life: short, good, on the couch or a Deck</small></span></label>
+        <span class="minor-label">Other lens</span>
         <label class="minor"><input type="radio" form="filters" name="sort" value="mp" /><span><b>Multiplayer</b></span></label>
       </div>
       <p id="count" aria-live="polite"></p>
@@ -385,15 +392,14 @@ h2 a { color: inherit; }
     </div>
 
     <footer>
-      <p>Data from <a href="https://store.steampowered.com/">Steam</a> (price, Metascore, reviews, Deck status, features), <a href="https://www.cheapshark.com/">CheapShark</a> (best price and all-time low) and <a href="https://howlongtobeat.com/">HowLongToBeat</a> (playtime). Updated <span id="updated"></span>.</p>
+      <p>Data from <a href="https://store.steampowered.com/">Steam</a> (reviews, list price, Deck status, features), <a href="https://www.metacritic.com/">Metacritic</a> (critic and user scores), <a href="https://www.gog.com/">GOG</a> (user rating) and <a href="https://howlongtobeat.com/">HowLongToBeat</a> (playtime, user rating). Prices are Steam's US list price; <a href="https://isthereanydeal.com/">IsThereAnyDeal</a> has today's best offer. Updated <span id="updated"></span>.</p>
       <details>
         <summary>How the scores work</summary>
         <p><b>Patient games</b> are out for at least a year and finished: not Early Access, not live service. The page shows only those unless you pick "All games".</p>
-        <p><b>Worth the wait</b> (0–100), is it good and finished today? 50 for quality now (Steam reviews of the last 6 months, adjusted for how many there are), 25 for how reviews moved since the launch quarter (held up 15, fixed since launch 25), 15 for being out a year and not Early Access or live service, 10 for the Metascore.</p>
-        <p><b>Buy now</b> (0–100), is today the moment? 40 for the discount off Steam's list price (75 % off or more), 40 for being at the all-time low (CheapShark), 20 for being below the price the game usually sits at. That last part needs 30 days of price history tracked here; until then the other two count 50 each. Free games have no deal score.</p>
-        <p>Two other lenses, not the focus: <b>Gamer Dad</b> (0–100), does it fit a busy schedule? 30 for a main story of 10 hours or less, 25 for quality now, 15 for Steam Deck Verified (8 for Playable), 10 for full controller support (5 partial), 10 for Steam Cloud saves, 10 for the Steam "Save Anytime" tag, −20 for live service.</p>
-        <p><b>Multiplayer</b> (0–100, games with online play only), is the community still there? 35 for players (log scale, 10k peak a day is full), 25 for review activity in the last 6 months compared with the 6 before, 25 for quality now, 15 for an announcement from the developers within the last 3 months.</p>
-        <p>Prices are US dollars, the cheapest offer across stores. Click a score to see each value it's based on.</p>
+        <p><b>Worth the wait</b> (0–100), how good is it today? Read it like a review score: 60 % players, 40 % critics. Players is the average of every player rating with at least 50 votes, each weighted by the number of digits of its vote count (1,000 votes weigh 3, a million weigh 6, so more votes count more without one site drowning out the others): Steam reviews of the last 6 months (all of them if there are too few, adjusted for how many there are), Metacritic user score, GOG and HowLongToBeat ratings, each scaled to 0–100. Critics is the Metascore. A missing source is left out; if a side is missing entirely, the other counts alone. Being finished is what makes a game patient, and the change since launch is on the card; neither adds points.</p>
+        <p><b>Gamer Dad</b> (0–100), does it fit a busy life? 30 for a short main story (full at 10 hours or less, nothing at 60 or more; HowLongToBeat), 25 for quality (full at Worth the wait 95, nothing at 70 or less), 15 for Steam Deck Verified (8 for Playable), 10 for full controller support (5 partial), 10 for Steam Cloud saves, 10 for the Steam "Save Anytime" tag, −20 for live service.</p>
+        <p>One other lens, <b>Multiplayer</b> (0–100, games with online play only), is the community still there? 35 for players (log scale, 10k peak a day is full), 25 for review activity in the last 6 months compared with the 6 before, 25 for quality now, 15 for an announcement from the developers within the last 3 months.</p>
+        <p>Click a score to see each value it's based on.</p>
       </details>
     </footer>
   </body>

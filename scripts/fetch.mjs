@@ -42,8 +42,10 @@ const today = new Date().toISOString().slice(0, 10);
 async function json(url, opts = {}, as = "json") {
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(url, { ...opts, headers: { "User-Agent": UA, ...opts.headers } });
-    // Rate limited: wait it out once, then give up on this lookup.
-    if (res.status === 429 && attempt === 0) { console.warn("  429, waiting 60s"); await sleep(60_000); continue; }
+    // Rate limited by Steam: wait it out once, then give up on this lookup. Steam
+    // sets the pace of the whole run anyway. Any other site just misses (the
+    // game keeps its old value): waiting would stall every game behind it.
+    if (res.status === 429 && attempt === 0 && /steampowered\.com|steamspy\.com/.test(url)) { console.warn("  429, waiting 60s"); await sleep(60_000); continue; }
     if (!res.ok) throw new Error(`${res.status} ${url}`);
     return res[as]();
   }
